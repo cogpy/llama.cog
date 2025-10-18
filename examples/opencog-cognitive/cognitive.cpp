@@ -1,4 +1,5 @@
 #include "opencog/opencog.h"
+#include "arg.h"
 #include "common.h"
 #include <iostream>
 #include <string>
@@ -97,7 +98,7 @@ int main(int argc, char ** argv) {
     common_params params;
     
     // Parse command line arguments
-    if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_COMMON)) {
+    if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_MAIN)) {
         return 1;
     }
     
@@ -121,19 +122,22 @@ int main(int argc, char ** argv) {
         case opencog::ArchitectureType::HYBRID_CPU_GPU:
             std::cout << "Hybrid CPU/GPU\n";
             break;
+        case opencog::ArchitectureType::DISTRIBUTED:
+            std::cout << "Distributed\n";
+            break;
         case opencog::ArchitectureType::MOBILE_OPTIMIZED:
             std::cout << "Mobile-optimized\n";
             break;
     }
     
     // Load model
-    if (params.model.empty()) {
+    if (params.model.path.empty()) {
         std::cout << "No model specified. Please use -m <model_path>\n";
         return 1;
     }
     
-    std::cout << "Loading model: " << params.model << "\n";
-    if (!cognitive_system.initialize(params.model, config)) {
+    std::cout << "Loading model: " << params.model.path << "\n";
+    if (!cognitive_system.initialize(params.model.path, config)) {
         std::cout << "Failed to initialize cognitive system\n";
         return 1;
     }
@@ -188,9 +192,9 @@ int main(int argc, char ** argv) {
             show_knowledge_base(cognitive_system);
         }
         else if (command == "add" && tokens.size() >= 2) {
-            std::string concept = tokens[1];
-            cognitive_system.add_knowledge(concept);
-            std::cout << "Added concept: " << concept << "\n";
+            std::string concept_name = tokens[1];
+            cognitive_system.add_knowledge(concept_name);
+            std::cout << "Added concept: " << concept_name << "\n";
         }
         else if (command == "goal" && tokens.size() >= 2) {
             std::string goal_desc;
