@@ -35,6 +35,11 @@ add_library(llama
             unicode-data.cpp
             unicode.cpp
             unicode.h
+            # OpenCog cognitive architecture components
+            opencog/atomspace.cpp
+            opencog/cognitive_cycle.cpp
+            opencog/llm_inference.cpp
+            opencog/opencog.cpp
             )
 
 target_include_directories(llama PRIVATE .)
