@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sstream>
+#include <chrono>
 
 /**
  * OpenCog Cognitive LLM Example
