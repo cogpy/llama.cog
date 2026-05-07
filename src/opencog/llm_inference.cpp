@@ -412,7 +412,7 @@ void LLMInferenceEngine::update_metrics(const std::chrono::steady_clock::time_po
     
     last_metrics_.processing_time_ms = duration.count();
     last_metrics_.tokens_generated = tokens_generated;
-    last_metrics_.tokens_per_second = tokens_generated * 1000.0 / duration.count();
+    last_metrics_.tokens_per_second = (duration.count() > 0) ? (tokens_generated * 1000.0 / duration.count()) : 0.0;
     last_metrics_.context_length = llama_n_ctx(context_);
     last_metrics_.memory_usage_mb = 0;  // Would need system-specific implementation
 }
