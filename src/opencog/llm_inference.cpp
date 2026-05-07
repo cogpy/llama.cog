@@ -51,7 +51,6 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
         llama_backend_free();
         return false;
     }
-    }
     
     // Set up context parameters
     llama_context_params ctx_params = llama_context_default_params();
