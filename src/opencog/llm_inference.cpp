@@ -175,6 +175,7 @@ std::string LLMInferenceEngine::generate_response(const std::string& prompt,
         llama_sampler_accept(sampler_, new_token);
         
         // Prepare for next iteration
+        llama_batch_free(batch);
         batch = llama_batch_init(1, 0, 1);
         batch.token[0] = new_token;
         batch.pos[0] = n_tokens + i;
