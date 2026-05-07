@@ -260,7 +260,7 @@ namespace utils {
 
 ArchitectureType detect_optimal_architecture() {
     // Simple architecture detection
-    #ifdef __CUDA_ARCH__
+    #if defined(GGML_USE_CUDA) || defined(GGML_USE_VULKAN)
         return ArchitectureType::GPU_ACCELERATED;
     #elif defined(__APPLE__) && defined(__arm64__)
         return ArchitectureType::HYBRID_CPU_GPU;  // Apple Silicon
