@@ -48,7 +48,9 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
     // Load model
     model_ = llama_model_load_from_file(model_path.c_str(), model_params);
     if (!model_) {
+        llama_backend_free();
         return false;
+    }
     }
     
     // Set up context parameters
