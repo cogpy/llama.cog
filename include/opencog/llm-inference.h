@@ -3,7 +3,7 @@
 
 #include "llama.h"
 #include "atomspace.h"
-#include "cognitive_cycle.h"
+#include "cognitive-cycle.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -65,6 +65,12 @@ private:
     llama_sampler * sampler_;
 
     bool model_loaded_;
+    // Tracks whether llama_backend_init() has been paired with a matching
+    // llama_backend_free(). Without this flag, a failed load_model() (which
+    // already initialised the backend) followed by destruction would call
+    // llama_backend_free() twice -- once in the failure path, once via
+    // unload_model() in the destructor.
+    bool backend_initialized_ = false;
     InferenceMetrics last_metrics_;
     ArchitectureConfig current_config_;
 

@@ -1,4 +1,4 @@
-#include "opencog/llm_inference.h"
+#include "opencog/llm-inference.h"
 #include "llama.h"
 #include "ggml-backend.h"
 #include <chrono>
@@ -28,9 +28,14 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
     // Initialize llama.cpp backend. ggml_backend_load_all() must be called
     // so the dynamic backends (CUDA, Vulkan, Metal, ...) are discovered;
     // without it, n_gpu_layers > 0 has no effect and inference silently
-    // falls back to CPU.
-    llama_backend_init();
-    ggml_backend_load_all();
+    // falls back to CPU. Backend init/free must be balanced exactly once;
+    // backend_initialized_ guards against double-free if load_model fails
+    // partway through and the destructor later runs unload_model.
+    if (!backend_initialized_) {
+        llama_backend_init();
+        ggml_backend_load_all();
+        backend_initialized_ = true;
+    }
 
     // Set up model parameters based on architecture config
     llama_model_params model_params = llama_model_default_params();
@@ -53,7 +58,8 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
     // Load model
     model_ = llama_model_load_from_file(model_path.c_str(), model_params);
     if (!model_) {
-        llama_backend_free();
+        // Leave backend init in place; unload_model() / destructor will
+        // free it exactly once via backend_initialized_.
         return false;
     }
 
@@ -68,7 +74,8 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
     if (!context_) {
         llama_model_free(model_);
         model_ = nullptr;
-        llama_backend_free();
+        // Leave backend init in place; unload_model() / destructor will
+        // free it exactly once via backend_initialized_.
         return false;
     }
 
@@ -104,7 +111,10 @@ void LLMInferenceEngine::unload_model() {
         model_ = nullptr;
     }
 
-    llama_backend_free();
+    if (backend_initialized_) {
+        llama_backend_free();
+        backend_initialized_ = false;
+    }
     model_loaded_ = false;
 }
 

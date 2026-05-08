@@ -11,8 +11,8 @@ llama_add_compile_flags()
 
 add_library(opencog STATIC
             atomspace.cpp
-            cognitive_cycle.cpp
-            llm_inference.cpp
+            cognitive-cycle.cpp
+            llm-inference.cpp
             opencog.cpp
             )
 

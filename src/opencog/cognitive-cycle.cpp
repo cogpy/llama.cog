@@ -1,5 +1,5 @@
-#include "opencog/cognitive_cycle.h"
-#include "opencog/llm_inference.h"
+#include "opencog/cognitive-cycle.h"
+#include "opencog/llm-inference.h"
 #include <thread>
 #include <algorithm>
 #include <sstream>

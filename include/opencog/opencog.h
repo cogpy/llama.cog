@@ -41,8 +41,8 @@
 
 // Core OpenCog components
 #include "atomspace.h"
-#include "cognitive_cycle.h"
-#include "llm_inference.h"
+#include "cognitive-cycle.h"
+#include "llm-inference.h"
 
 #include <thread>
 
