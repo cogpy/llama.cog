@@ -9,10 +9,10 @@
 
 /**
  * OpenCog Cognitive LLM Example
- * 
+ *
  * This example demonstrates the OpenCog-inspired cognitive architecture
  * integrated with llama.cpp for embodied, architecture-aware LLM inference.
- * 
+ *
  * Features demonstrated:
  * - AtomSpace knowledge representation
  * - Goal-driven cognitive processing
@@ -51,7 +51,7 @@ void print_help() {
 
 void print_system_status(const opencog::CognitiveSystem& system) {
     auto metrics = system.get_metrics();
-    
+
     std::cout << "\n=== System Status ===\n";
     std::cout << "AtomSpace size: " << metrics.atomspace_size << " atoms\n";
     std::cout << "Active goals: " << metrics.active_goals_count << "\n";
@@ -64,13 +64,13 @@ void print_system_status(const opencog::CognitiveSystem& system) {
 
 void show_active_goals(const opencog::CognitiveSystem& system) {
     auto goals = system.get_cognitive_cycle()->get_active_goals();
-    
+
     std::cout << "\n=== Active Goals ===\n";
     if (goals.empty()) {
         std::cout << "No active goals\n";
     } else {
         for (size_t i = 0; i < goals.size(); ++i) {
-            std::cout << (i + 1) << ". " << goals[i].description 
+            std::cout << (i + 1) << ". " << goals[i].description
                       << " (priority: " << goals[i].priority << ")\n";
         }
     }
@@ -79,12 +79,12 @@ void show_active_goals(const opencog::CognitiveSystem& system) {
 
 void show_knowledge_base(const opencog::CognitiveSystem& system) {
     auto atomspace = system.get_atomspace();
-    
+
     std::cout << "\n=== Knowledge Base ===\n";
     std::cout << "Total atoms: " << atomspace->size() << "\n";
     std::cout << "Nodes: " << atomspace->get_num_nodes() << "\n";
     std::cout << "Links: " << atomspace->get_num_links() << "\n";
-    
+
     // Show high-attention atoms
     auto focus_atoms = atomspace->get_attentional_focus(10);
     if (!focus_atoms.empty()) {
@@ -98,19 +98,19 @@ void show_knowledge_base(const opencog::CognitiveSystem& system) {
 
 int main(int argc, char ** argv) {
     common_params params;
-    
+
     // Parse command line arguments
     if (!common_params_parse(argc, argv, params, LLAMA_EXAMPLE_MAIN)) {
         return 1;
     }
-    
+
     print_banner();
-    
+
     // Initialize cognitive system
     std::cout << "Initializing OpenCog Cognitive System...\n";
-    
+
     opencog::CognitiveSystem cognitive_system;
-    
+
     // Configure architecture based on available hardware
     opencog::ArchitectureConfig config = opencog::utils::create_optimal_config();
     std::cout << "Detected architecture: ";
@@ -131,56 +131,56 @@ int main(int argc, char ** argv) {
             std::cout << "Mobile-optimized\n";
             break;
     }
-    
+
     // Load model
     if (params.model.path.empty()) {
         std::cout << "No model specified. Please use -m <model_path>\n";
         return 1;
     }
-    
+
     std::cout << "Loading model: " << params.model.path << "\n";
     if (!cognitive_system.initialize(params.model.path, config)) {
         std::cout << "Failed to initialize cognitive system\n";
         return 1;
     }
-    
+
     std::cout << "System initialized successfully!\n";
     std::cout << "Type 'help' for available commands.\n\n";
-    
+
     // Add some initial knowledge
     cognitive_system.add_knowledge("artificial_intelligence", "is_a", "cognitive_technology");
     cognitive_system.add_knowledge("reasoning", "enables", "problem_solving");
     cognitive_system.add_spatial_knowledge("AI_system", "digital_environment");
     cognitive_system.add_causal_knowledge("learning", "improved_performance", 0.9);
-    
+
     // Set initial goals
     cognitive_system.set_goal("Understand user queries", 0.9);
     cognitive_system.set_goal("Provide helpful responses", 0.8);
     cognitive_system.set_goal("Learn from interactions", 0.7);
-    
+
     bool continuous_mode = false;
     std::string line;
-    
+
     // Main interaction loop
     while (true) {
         std::cout << "opencog> ";
         if (!std::getline(std::cin, line)) {
             break;
         }
-        
+
         if (line.empty()) continue;
-        
+
         std::vector<std::string> tokens;
         std::istringstream iss(line);
         std::string token;
         while (iss >> token) {
             tokens.push_back(token);
         }
-        
+
         if (tokens.empty()) continue;
-        
+
         const std::string& command = tokens[0];
-        
+
         if (command == "help") {
             print_help();
         }
@@ -261,21 +261,21 @@ int main(int argc, char ** argv) {
             // Treat as a query to the cognitive system
             std::cout << "\nProcessing query: " << line << "\n";
             std::cout << "Response: ";
-            
+
             auto start = std::chrono::steady_clock::now();
             std::string response = cognitive_system.process_query(line);
             auto end = std::chrono::steady_clock::now();
-            
+
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            
+
             std::cout << response << "\n";
             std::cout << "\n[Processed in " << duration.count() << " ms]\n\n";
         }
     }
-    
+
     std::cout << "\nShutting down cognitive system...\n";
     cognitive_system.shutdown();
     std::cout << "Goodbye!\n";
-    
+
     return 0;
 }

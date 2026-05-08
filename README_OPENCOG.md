@@ -198,7 +198,7 @@ cognitive_system.add_causal_knowledge("learning", "improved_performance", 0.8);
 
 // Plan actions for a goal
 auto actions = cognitive_system.plan_actions("improve robot performance");
-// Results: ["identify_knowledge_gap", "search_for_information", 
+// Results: ["identify_knowledge_gap", "search_for_information",
 //          "integrate_new_knowledge", "validate_understanding"]
 ```
 
@@ -234,7 +234,7 @@ The system is designed for real-time cognitive processing:
 ## Future Enhancements
 
 - Advanced pattern matching and unification
-- More sophisticated learning algorithms  
+- More sophisticated learning algorithms
 - Distributed cognitive processing
 - Integration with robotics frameworks
 - Multi-modal perception and reasoning
