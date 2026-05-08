@@ -369,7 +369,7 @@ std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& 
     while (ss >> word) {
         // Remove punctuation
         word.erase(std::remove_if(word.begin(), word.end(),
-                                 [](char c) { return !std::isalnum(c); }), word.end());
+                                 [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); }), word.end());
 
         if (word.length() > 3) {  // Only consider meaningful words
             auto atom = atomspace.add_node(AtomType::CONCEPT_NODE, word);
