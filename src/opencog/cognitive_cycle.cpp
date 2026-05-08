@@ -16,29 +16,42 @@ CognitiveCycleManager::CognitiveCycleManager(std::shared_ptr<AtomSpace> atomspac
 void CognitiveCycleManager::run_single_cycle() {
     auto cycle_start = std::chrono::steady_clock::now();
 
-    // Standard cognitive cycle phases
-    perception_phase();
-    goal_selection_phase();
-    action_selection_phase();
-    execution_phase();
-    learning_phase();
+    // The phase methods and the cycle_count/last_cycle updates all touch
+    // state_, which is also read/written by the main thread via
+    // process_input, generate_response, add_goal, etc. Hold state_mutex_ for
+    // the duration of the work, but release it before sleep_for so other
+    // threads aren't blocked while we wait to maintain the target frequency.
+    size_t cycle_count_snapshot = 0;
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
 
-    // Update state
-    state_.cycle_count++;
-    state_.last_cycle = cycle_start;
+        // Standard cognitive cycle phases
+        perception_phase();
+        goal_selection_phase();
+        action_selection_phase();
+        execution_phase();
+        learning_phase();
 
-    // Architecture-aware optimizations
+        // Update state
+        state_.cycle_count++;
+        state_.last_cycle = cycle_start;
+        cycle_count_snapshot = state_.cycle_count;
+    }
+
+    // Architecture-aware optimizations (no state_ access required).
     optimize_for_architecture();
 
-    // Attention decay
-    if (state_.cycle_count % 10 == 0) {  // Every 10 cycles
+    // Attention decay. AtomSpace has its own internal locking, so we only
+    // need state_mutex_ to read cycle_count above; the decay call itself
+    // does not need our lock.
+    if (cycle_count_snapshot % 10 == 0) {  // Every 10 cycles
         state_.atomspace->decay_attention();
     }
 
     auto cycle_end = std::chrono::steady_clock::now();
     auto cycle_duration = std::chrono::duration_cast<std::chrono::milliseconds>(cycle_end - cycle_start);
 
-    // Maintain cycle frequency
+    // Maintain cycle frequency. Sleep without holding state_mutex_.
     auto target_cycle_time = std::chrono::milliseconds(static_cast<int>(1000.0 / cycle_frequency_hz_));
     if (cycle_duration < target_cycle_time) {
         std::this_thread::sleep_for(target_cycle_time - cycle_duration);
@@ -60,10 +73,13 @@ void CognitiveCycleManager::stop() {
 }
 
 void CognitiveCycleManager::add_goal(const Goal& goal) {
+    std::lock_guard<std::mutex> lock(state_mutex_);
     state_.active_goals.push(goal);
 }
 
 void CognitiveCycleManager::remove_goal(const std::string& description) {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
     // Rebuild priority queue without the specified goal
     std::priority_queue<Goal> new_goals;
     auto temp_goals = state_.active_goals;
@@ -80,6 +96,8 @@ void CognitiveCycleManager::remove_goal(const std::string& description) {
 }
 
 std::vector<Goal> CognitiveCycleManager::get_active_goals() const {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+
     std::vector<Goal> goals;
     auto temp_goals = state_.active_goals;
 
@@ -89,6 +107,11 @@ std::vector<Goal> CognitiveCycleManager::get_active_goals() const {
     }
 
     return goals;
+}
+
+CognitiveState CognitiveCycleManager::get_state() const {
+    std::lock_guard<std::mutex> lock(state_mutex_);
+    return state_;
 }
 
 void CognitiveCycleManager::set_architecture_config(const ArchitectureConfig& config) {
@@ -101,16 +124,17 @@ const ArchitectureConfig& CognitiveCycleManager::get_architecture_config() const
 }
 
 void CognitiveCycleManager::process_input(const std::string& input) {
-    // Create concept node for the input
+    // Create concept node for the input. AtomSpace operations are
+    // internally synchronised, so they do not need state_mutex_.
     auto input_node = state_.atomspace->add_node(AtomType::CONCEPT_NODE, "input:" + input);
     input_node->set_attention_value(AttentionValue(0.9, 0.8));  // High importance and urgency
 
-    // Update current context
+    // Mutate state_ under state_mutex_. Inline the goal push instead of
+    // calling add_goal() so we do not attempt to re-acquire the same
+    // (non-recursive) mutex.
+    std::lock_guard<std::mutex> lock(state_mutex_);
     state_.current_context = input;
-
-    // Add processing goal
-    Goal process_goal("Process input: " + input, 0.8);
-    add_goal(process_goal);
+    state_.active_goals.push(Goal("Process input: " + input, 0.8));
 }
 
 std::string CognitiveCycleManager::generate_response(const std::string& context) {
@@ -118,12 +142,24 @@ std::string CognitiveCycleManager::generate_response(const std::string& context)
         return "Error: No language model loaded";
     }
 
-    // Get relevant knowledge from atomspace
-    auto relevant_atoms = select_relevant_knowledge(context.empty() ? state_.current_context : context);
+    // Snapshot the parts of state_ we need under the lock so the LLM call
+    // (which can take a while) does not block the cognitive worker thread
+    // and is not affected by concurrent mutations.
+    std::string effective_context;
+    CognitiveState state_snapshot(state_.atomspace);
+    {
+        std::lock_guard<std::mutex> lock(state_mutex_);
+        effective_context = context.empty() ? state_.current_context : context;
+        state_snapshot = state_;
+    }
+
+    // Get relevant knowledge from atomspace (atomspace has its own locking).
+    auto relevant_atoms = select_relevant_knowledge(effective_context);
+    (void)relevant_atoms;
 
     // Generate response using cognitive inference
-    return llm_engine_->cognitive_inference(context.empty() ? state_.current_context : context,
-                                          state_, arch_config_);
+    return llm_engine_->cognitive_inference(effective_context,
+                                          state_snapshot, arch_config_);
 }
 
 void CognitiveCycleManager::set_cycle_frequency_hz(double frequency) {

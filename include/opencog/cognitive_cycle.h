@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <queue>
 
 namespace opencog {
@@ -91,14 +92,22 @@ public:
     void process_input(const std::string& input);
     std::string generate_response(const std::string& context = "");
 
-    // State access
-    const CognitiveState& get_state() const { return state_; }
+    // Returns a snapshot of the cognitive state. Returned by value (rather
+    // than by reference) so callers cannot observe partial mutations from
+    // the continuous-processing worker thread; the snapshot is taken under
+    // state_mutex_.
+    CognitiveState get_state() const;
 
     // Configuration
     void set_cycle_frequency_hz(double frequency);
     void set_attention_decay_rate(double rate);
 
 private:
+    // state_ is accessed concurrently from the main thread (process_input,
+    // generate_response, add_goal, get_active_goals, get_state) and from the
+    // worker thread launched by run_continuous(). All accesses must be
+    // serialised through state_mutex_.
+    mutable std::mutex state_mutex_;
     CognitiveState state_;
     std::shared_ptr<LLMInferenceEngine> llm_engine_;
     ArchitectureConfig arch_config_;

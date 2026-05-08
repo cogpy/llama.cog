@@ -66,7 +66,6 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
         llama_backend_free();
         return false;
     }
-    }
 
     // Create sampler
     llama_sampler_chain_params sampler_params = llama_sampler_chain_default_params();
