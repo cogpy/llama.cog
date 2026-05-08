@@ -54,7 +54,7 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
 
     // Set up context parameters
     llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = std::min(config.max_context_length, 4096UL);
+    ctx_params.n_ctx = std::min(config.max_context_length, static_cast<size_t>(4096));
     ctx_params.n_threads = std::thread::hardware_concurrency();
     ctx_params.n_threads_batch = ctx_params.n_threads;
 
@@ -239,7 +239,7 @@ std::string LLMInferenceEngine::cognitive_inference(const std::string& input,
     cognitive_prompt << "Please provide a thoughtful response considering the knowledge context and goals:";
 
     // Generate response with architecture awareness
-    size_t max_tokens = std::min(config.max_context_length / 4, 512UL);
+    size_t max_tokens = std::min(config.max_context_length / 4, static_cast<size_t>(512));
     return generate_response(cognitive_prompt.str(), state.current_focus, max_tokens);
 }
 
