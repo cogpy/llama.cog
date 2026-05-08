@@ -1,5 +1,6 @@
 #include "opencog/llm_inference.h"
 #include "llama.h"
+#include "ggml-backend.h"
 #include <chrono>
 #include <sstream>
 #include <algorithm>
@@ -24,8 +25,12 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
 
     current_config_ = config;
 
-    // Initialize llama.cpp backend
+    // Initialize llama.cpp backend. ggml_backend_load_all() must be called
+    // so the dynamic backends (CUDA, Vulkan, Metal, ...) are discovered;
+    // without it, n_gpu_layers > 0 has no effect and inference silently
+    // falls back to CPU.
     llama_backend_init();
+    ggml_backend_load_all();
 
     // Set up model parameters based on architecture config
     llama_model_params model_params = llama_model_default_params();

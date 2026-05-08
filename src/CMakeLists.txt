@@ -35,11 +35,6 @@ add_library(llama
             unicode-data.cpp
             unicode.cpp
             unicode.h
-            # OpenCog cognitive architecture components
-            opencog/atomspace.cpp
-            opencog/cognitive_cycle.cpp
-            opencog/llm_inference.cpp
-            opencog/opencog.cpp
             )
 
 target_include_directories(llama PRIVATE .)
@@ -53,3 +48,8 @@ if (BUILD_SHARED_LIBS)
     target_compile_definitions(llama PRIVATE LLAMA_BUILD)
     target_compile_definitions(llama PUBLIC  LLAMA_SHARED)
 endif()
+
+# OpenCog cognitive architecture components: built as a separate static
+# library so they are not linked into every consumer of libllama, only into
+# the few targets (e.g. llama-cognitive) that opt in.
+add_subdirectory(opencog)
