@@ -303,9 +303,9 @@ double LLMInferenceEngine::compute_semantic_similarity(const std::string& text1,
     double norm2 = 0.0;
     
     for (size_t i = 0; i < emb1.size(); ++i) {
-        dot_product += emb1[i] * emb2[i];
-        norm1 += emb1[i] * emb1[i];
-        norm2 += emb2[i] * emb2[i];
+        dot_product += static_cast<double>(emb1[i]) * static_cast<double>(emb2[i]);
+        norm1 += static_cast<double>(emb1[i]) * static_cast<double>(emb1[i]);
+        norm2 += static_cast<double>(emb2[i]) * static_cast<double>(emb2[i]);
     }
     
     if (norm1 == 0.0 || norm2 == 0.0) {
