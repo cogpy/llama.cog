@@ -2,14 +2,15 @@
 #define OPENCOG_COGNITIVE_CYCLE_H
 
 #include "atomspace.h"
+#include <atomic>
+#include <chrono>
+#include <functional>
 #include <memory>
 #include <queue>
-#include <functional>
-#include <chrono>
 
 namespace opencog {
 
-// Forward declarations  
+// Forward declarations
 class LLMInferenceEngine;
 class GoalManager;
 class PerceptionProcessor;
@@ -21,10 +22,10 @@ struct Goal {
     std::chrono::steady_clock::time_point created;
     std::shared_ptr<Atom> goal_atom;
     bool completed;
-    
-    Goal(const std::string& desc, double prio = 0.5) 
+
+    Goal(const std::string& desc, double prio = 0.5)
         : description(desc), priority(prio), created(std::chrono::steady_clock::now()), completed(false) {}
-    
+
     bool operator<(const Goal& other) const {
         return priority < other.priority; // Max heap based on priority
     }
@@ -38,15 +39,15 @@ struct CognitiveState {
     std::string current_context;
     size_t cycle_count;
     std::chrono::steady_clock::time_point last_cycle;
-    
-    CognitiveState(std::shared_ptr<AtomSpace> as) 
+
+    CognitiveState(std::shared_ptr<AtomSpace> as)
         : atomspace(as), cycle_count(0), last_cycle(std::chrono::steady_clock::now()) {}
 };
 
 // Architecture awareness for different hardware/model configurations
 enum class ArchitectureType {
     CPU_ONLY,
-    GPU_ACCELERATED, 
+    GPU_ACCELERATED,
     HYBRID_CPU_GPU,
     DISTRIBUTED,
     MOBILE_OPTIMIZED
@@ -58,9 +59,9 @@ struct ArchitectureConfig {
     size_t max_context_length;
     double inference_budget_ms;  // Time budget per inference
     bool enable_speculative_decoding;
-    
-    ArchitectureConfig() 
-        : type(ArchitectureType::CPU_ONLY), memory_limit_mb(4096), 
+
+    ArchitectureConfig()
+        : type(ArchitectureType::CPU_ONLY), memory_limit_mb(4096),
           max_context_length(2048), inference_budget_ms(100.0),
           enable_speculative_decoding(false) {}
 };
@@ -68,31 +69,31 @@ struct ArchitectureConfig {
 // Core cognitive cycle manager
 class CognitiveCycleManager {
 public:
-    CognitiveCycleManager(std::shared_ptr<AtomSpace> atomspace, 
+    CognitiveCycleManager(std::shared_ptr<AtomSpace> atomspace,
                          std::shared_ptr<LLMInferenceEngine> llm_engine);
     ~CognitiveCycleManager() = default;
-    
+
     // Cognitive cycle execution
     void run_single_cycle();
     void run_continuous(size_t max_cycles = 0);
     void stop();
-    
+
     // Goal management
     void add_goal(const Goal& goal);
     void remove_goal(const std::string& description);
     std::vector<Goal> get_active_goals() const;
-    
+
     // Architecture awareness
     void set_architecture_config(const ArchitectureConfig& config);
     const ArchitectureConfig& get_architecture_config() const;
-    
+
     // Perception and action
     void process_input(const std::string& input);
     std::string generate_response(const std::string& context = "");
-    
+
     // State access
     const CognitiveState& get_state() const { return state_; }
-    
+
     // Configuration
     void set_cycle_frequency_hz(double frequency);
     void set_attention_decay_rate(double rate);
@@ -101,23 +102,23 @@ private:
     CognitiveState state_;
     std::shared_ptr<LLMInferenceEngine> llm_engine_;
     ArchitectureConfig arch_config_;
-    
-    bool running_;
+
+    std::atomic<bool> running_;
     double cycle_frequency_hz_;
     double attention_decay_rate_;
-    
+
     // Cognitive cycle phases
     void perception_phase();
     void goal_selection_phase();
-    void action_selection_phase(); 
+    void action_selection_phase();
     void execution_phase();
     void learning_phase();
-    
+
     // Architecture-aware optimizations
     void optimize_for_architecture();
     void manage_memory_constraints();
     void balance_inference_load();
-    
+
     // Internal utilities
     void update_attentional_focus();
     void process_goal_completion();
@@ -129,19 +130,19 @@ class EmbodiedReasoningEngine {
 public:
     EmbodiedReasoningEngine(std::shared_ptr<AtomSpace> atomspace);
     ~EmbodiedReasoningEngine() = default;
-    
+
     // Spatial and temporal reasoning
     void add_spatial_knowledge(const std::string& object, const std::string& location);
     void add_temporal_knowledge(const std::string& event, const std::string& time_context);
-    
+
     // Causal reasoning
     void add_causal_relation(const std::string& cause, const std::string& effect, double confidence = 0.8);
     std::vector<std::string> infer_consequences(const std::string& action) const;
-    
+
     // Contextual understanding
     void update_context(const std::string& new_context);
     std::string get_current_context() const;
-    
+
     // Embodied action planning
     std::vector<std::string> plan_actions(const std::string& goal) const;
     bool validate_action_feasibility(const std::string& action, const std::string& context) const;
@@ -149,7 +150,7 @@ public:
 private:
     std::shared_ptr<AtomSpace> atomspace_;
     std::string current_context_;
-    
+
     // Internal reasoning methods
     std::shared_ptr<Atom> create_spatial_atom(const std::string& object, const std::string& location);
     std::shared_ptr<Atom> create_temporal_atom(const std::string& event, const std::string& time);

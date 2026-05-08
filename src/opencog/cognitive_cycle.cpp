@@ -15,29 +15,29 @@ CognitiveCycleManager::CognitiveCycleManager(std::shared_ptr<AtomSpace> atomspac
 
 void CognitiveCycleManager::run_single_cycle() {
     auto cycle_start = std::chrono::steady_clock::now();
-    
+
     // Standard cognitive cycle phases
     perception_phase();
     goal_selection_phase();
     action_selection_phase();
     execution_phase();
     learning_phase();
-    
+
     // Update state
     state_.cycle_count++;
     state_.last_cycle = cycle_start;
-    
+
     // Architecture-aware optimizations
     optimize_for_architecture();
-    
+
     // Attention decay
     if (state_.cycle_count % 10 == 0) {  // Every 10 cycles
         state_.atomspace->decay_attention();
     }
-    
+
     auto cycle_end = std::chrono::steady_clock::now();
     auto cycle_duration = std::chrono::duration_cast<std::chrono::milliseconds>(cycle_end - cycle_start);
-    
+
     // Maintain cycle frequency
     auto target_cycle_time = std::chrono::milliseconds(static_cast<int>(1000.0 / cycle_frequency_hz_));
     if (cycle_duration < target_cycle_time) {
@@ -48,7 +48,7 @@ void CognitiveCycleManager::run_single_cycle() {
 void CognitiveCycleManager::run_continuous(size_t max_cycles) {
     running_ = true;
     size_t cycles_run = 0;
-    
+
     while (running_ && (max_cycles == 0 || cycles_run < max_cycles)) {
         run_single_cycle();
         cycles_run++;
@@ -67,7 +67,7 @@ void CognitiveCycleManager::remove_goal(const std::string& description) {
     // Rebuild priority queue without the specified goal
     std::priority_queue<Goal> new_goals;
     auto temp_goals = state_.active_goals;
-    
+
     while (!temp_goals.empty()) {
         Goal g = temp_goals.top();
         temp_goals.pop();
@@ -75,19 +75,19 @@ void CognitiveCycleManager::remove_goal(const std::string& description) {
             new_goals.push(g);
         }
     }
-    
+
     state_.active_goals = new_goals;
 }
 
 std::vector<Goal> CognitiveCycleManager::get_active_goals() const {
     std::vector<Goal> goals;
     auto temp_goals = state_.active_goals;
-    
+
     while (!temp_goals.empty()) {
         goals.push_back(temp_goals.top());
         temp_goals.pop();
     }
-    
+
     return goals;
 }
 
@@ -104,10 +104,10 @@ void CognitiveCycleManager::process_input(const std::string& input) {
     // Create concept node for the input
     auto input_node = state_.atomspace->add_node(AtomType::CONCEPT_NODE, "input:" + input);
     input_node->set_attention_value(AttentionValue(0.9, 0.8));  // High importance and urgency
-    
+
     // Update current context
     state_.current_context = input;
-    
+
     // Add processing goal
     Goal process_goal("Process input: " + input, 0.8);
     add_goal(process_goal);
@@ -117,10 +117,10 @@ std::string CognitiveCycleManager::generate_response(const std::string& context)
     if (!llm_engine_->is_model_loaded()) {
         return "Error: No language model loaded";
     }
-    
+
     // Get relevant knowledge from atomspace
     auto relevant_atoms = select_relevant_knowledge(context.empty() ? state_.current_context : context);
-    
+
     // Generate response using cognitive inference
     return llm_engine_->cognitive_inference(context.empty() ? state_.current_context : context,
                                           state_, arch_config_);
@@ -138,7 +138,7 @@ void CognitiveCycleManager::set_attention_decay_rate(double rate) {
 void CognitiveCycleManager::perception_phase() {
     // Update attentional focus
     update_attentional_focus();
-    
+
     // Process sensory inputs (if any)
     // This would typically involve processing external stimuli
 }
@@ -146,14 +146,16 @@ void CognitiveCycleManager::perception_phase() {
 void CognitiveCycleManager::goal_selection_phase() {
     // Select highest priority goal for processing
     if (!state_.active_goals.empty()) {
-        Goal current_goal = state_.active_goals.top();
-        
-        // Create goal atom in atomspace
-        if (!current_goal.goal_atom) {
-            auto goal_node = state_.atomspace->add_node(AtomType::CONCEPT_NODE, "goal:" + current_goal.description);
-            goal_node->set_attention_value(AttentionValue(current_goal.priority, 0.7));
-            current_goal.goal_atom = goal_node;
-        }
+        const Goal& current_goal = state_.active_goals.top();
+
+        // Ensure a corresponding goal atom exists in the AtomSpace.
+        // add_node is idempotent (it returns the existing atom for the same
+        // type+name), so this is safe to call on every cycle without
+        // creating duplicates. We avoid mutating a local copy of the queued
+        // goal because std::priority_queue exposes only a const top().
+        auto goal_node = state_.atomspace->add_node(
+            AtomType::CONCEPT_NODE, "goal:" + current_goal.description);
+        goal_node->set_attention_value(AttentionValue(current_goal.priority, 0.7));
     }
 }
 
@@ -170,7 +172,7 @@ void CognitiveCycleManager::action_selection_phase() {
 void CognitiveCycleManager::execution_phase() {
     // Execute selected actions
     // This could involve calling external systems, updating the atomspace, etc.
-    
+
     // Check for goal completion
     process_goal_completion();
 }
@@ -178,7 +180,7 @@ void CognitiveCycleManager::execution_phase() {
 void CognitiveCycleManager::learning_phase() {
     // Update truth values based on recent experiences
     state_.atomspace->update_attention_values();
-    
+
     // Consolidate knowledge (simplified)
     if (state_.cycle_count % 100 == 0) {  // Every 100 cycles
         // Perform more intensive learning/consolidation
@@ -229,37 +231,37 @@ void CognitiveCycleManager::process_goal_completion() {
     // Check if any goals have been completed
     auto temp_goals = state_.active_goals;
     std::priority_queue<Goal> remaining_goals;
-    
+
     while (!temp_goals.empty()) {
         Goal g = temp_goals.top();
         temp_goals.pop();
-        
+
         // Simple completion check - in reality this would be more sophisticated
         auto elapsed = std::chrono::steady_clock::now() - g.created;
         if (elapsed < std::chrono::minutes(5)) {  // Keep goals active for 5 minutes
             remaining_goals.push(g);
         }
     }
-    
+
     state_.active_goals = remaining_goals;
 }
 
 std::vector<std::shared_ptr<Atom>> CognitiveCycleManager::select_relevant_knowledge(const std::string& context) const {
     // Query atomspace for relevant atoms
     auto query_atoms = state_.atomspace->query(context);
-    
+
     // Also include high-attention atoms
     auto focus_atoms = state_.atomspace->get_attentional_focus(20);
-    
+
     // Combine and deduplicate
     std::vector<std::shared_ptr<Atom>> relevant;
     relevant.insert(relevant.end(), query_atoms.begin(), query_atoms.end());
     relevant.insert(relevant.end(), focus_atoms.begin(), focus_atoms.end());
-    
+
     // Remove duplicates (simplified)
     std::sort(relevant.begin(), relevant.end());
     relevant.erase(std::unique(relevant.begin(), relevant.end()), relevant.end());
-    
+
     return relevant;
 }
 
@@ -285,10 +287,10 @@ void EmbodiedReasoningEngine::add_causal_relation(const std::string& cause, cons
 
 std::vector<std::string> EmbodiedReasoningEngine::infer_consequences(const std::string& action) const {
     std::vector<std::string> consequences;
-    
+
     // Query for causal relations involving this action
     auto causal_atoms = atomspace_->query(action);
-    
+
     for (auto atom : causal_atoms) {
         if (atom->is_link() && atom->get_type() == AtomType::IMPLICATION_LINK) {
             // Extract consequence from implication link
@@ -299,13 +301,13 @@ std::vector<std::string> EmbodiedReasoningEngine::infer_consequences(const std::
             }
         }
     }
-    
+
     return consequences;
 }
 
 void EmbodiedReasoningEngine::update_context(const std::string& new_context) {
     current_context_ = new_context;
-    
+
     // Create context atom
     auto context_node = atomspace_->add_node(AtomType::CONCEPT_NODE, "context:" + new_context);
     context_node->set_attention_value(AttentionValue(0.8, 0.6));
@@ -317,10 +319,10 @@ std::string EmbodiedReasoningEngine::get_current_context() const {
 
 std::vector<std::string> EmbodiedReasoningEngine::plan_actions(const std::string& goal) const {
     std::vector<std::string> plan;
-    
+
     // Simple planning based on goal decomposition
     // In a full implementation, this would use more sophisticated planning algorithms
-    
+
     if (goal.find("move") != std::string::npos) {
         plan.push_back("check_current_location");
         plan.push_back("plan_path");
@@ -332,17 +334,17 @@ std::vector<std::string> EmbodiedReasoningEngine::plan_actions(const std::string
         plan.push_back("integrate_new_knowledge");
         plan.push_back("validate_understanding");
     }
-    
+
     return plan;
 }
 
 bool EmbodiedReasoningEngine::validate_action_feasibility(const std::string& action, const std::string& context) const {
     // Simple feasibility check
     // In reality, this would involve complex reasoning about physical constraints, capabilities, etc.
-    
+
     auto context_atoms = atomspace_->query(context);
     auto action_atoms = atomspace_->query(action);
-    
+
     // If we have knowledge about both context and action, assume feasible
     return !context_atoms.empty() && !action_atoms.empty();
 }
@@ -352,11 +354,11 @@ std::shared_ptr<Atom> EmbodiedReasoningEngine::create_spatial_atom(const std::st
     auto object_node = atomspace_->add_node(AtomType::CONCEPT_NODE, object);
     auto location_node = atomspace_->add_node(AtomType::CONCEPT_NODE, location);
     auto at_predicate = atomspace_->add_node(AtomType::PREDICATE_NODE, "at");
-    
+
     // Create (EvaluationLink (PredicateNode "at") (ListLink object location))
     std::vector<std::shared_ptr<Atom>> args = {object_node, location_node};
     auto list_link = atomspace_->add_link(AtomType::INHERITANCE_LINK, args);  // Simplified
-    
+
     std::vector<std::shared_ptr<Atom>> eval_args = {at_predicate, list_link};
     return atomspace_->add_link(AtomType::EVALUATION_LINK, eval_args);
 }
@@ -365,10 +367,10 @@ std::shared_ptr<Atom> EmbodiedReasoningEngine::create_temporal_atom(const std::s
     auto event_node = atomspace_->add_node(AtomType::CONCEPT_NODE, event);
     auto time_node = atomspace_->add_node(AtomType::CONCEPT_NODE, time);
     auto during_predicate = atomspace_->add_node(AtomType::PREDICATE_NODE, "during");
-    
+
     std::vector<std::shared_ptr<Atom>> args = {event_node, time_node};
     auto list_link = atomspace_->add_link(AtomType::INHERITANCE_LINK, args);
-    
+
     std::vector<std::shared_ptr<Atom>> eval_args = {during_predicate, list_link};
     return atomspace_->add_link(AtomType::EVALUATION_LINK, eval_args);
 }
@@ -376,7 +378,7 @@ std::shared_ptr<Atom> EmbodiedReasoningEngine::create_temporal_atom(const std::s
 std::shared_ptr<Atom> EmbodiedReasoningEngine::create_causal_atom(const std::string& cause, const std::string& effect) {
     auto cause_node = atomspace_->add_node(AtomType::CONCEPT_NODE, cause);
     auto effect_node = atomspace_->add_node(AtomType::CONCEPT_NODE, effect);
-    
+
     std::vector<std::shared_ptr<Atom>> args = {cause_node, effect_node};
     return atomspace_->add_link(AtomType::IMPLICATION_LINK, args);
 }
