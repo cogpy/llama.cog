@@ -173,7 +173,7 @@ std::string LLMInferenceEngine::generate_response(const std::string& prompt,
         }
 
         // Accept the token
-        llama_sampler_accept(sampler_, new_token);
+        // llama_sampler_sample already calls llama_sampler_accept internally
 
         // Prepare for next iteration
         llama_batch_free(batch);
