@@ -7,16 +7,16 @@
 
 namespace opencog {
 
-// CognitiveSystem implementation
-CognitiveSystem::CognitiveSystem() : initialized_(false) {
-    atomspace_ = std::make_shared<AtomSpace>();
-    llm_engine_ = std::make_shared<LLMInferenceEngine>();
-    reasoning_engine_ = std::make_shared<EmbodiedReasoningEngine>(atomspace_);
-    prompt_engine_ = std::make_shared<CognitivePromptEngine>(atomspace_);
-    memory_manager_ = std::make_shared<CognitiveLLMMemory>(atomspace_);
+// cognitive_system implementation
+cognitive_system::cognitive_system() : initialized_(false) {
+    atomspace_ = std::make_shared<atom_space>();
+    llm_engine_ = std::make_shared<llm_inference_engine>();
+    reasoning_engine_ = std::make_shared<embodied_reasoning_engine>(atomspace_);
+    prompt_engine_ = std::make_shared<cognitive_prompt_engine>(atomspace_);
+    memory_manager_ = std::make_shared<cognitive_llm_memory>(atomspace_);
 }
 
-CognitiveSystem::~CognitiveSystem() {
+cognitive_system::~cognitive_system() {
     // Ensure the worker thread is stopped before the underlying resources
     // (atomspace_, llm_engine_, cognitive_cycle_) are destroyed. Without this
     // a still-joinable cycle_thread_ would trigger std::terminate when its
@@ -31,7 +31,7 @@ CognitiveSystem::~CognitiveSystem() {
     }
 }
 
-bool CognitiveSystem::initialize(const std::string& model_path, const ArchitectureConfig& config) {
+bool cognitive_system::initialize(const std::string& model_path, const architecture_config& config) {
     if (initialized_) {
         return true;
     }
@@ -44,7 +44,7 @@ bool CognitiveSystem::initialize(const std::string& model_path, const Architectu
     }
 
     // Initialize cognitive cycle after LLM is loaded
-    cognitive_cycle_ = std::make_shared<CognitiveCycleManager>(atomspace_, llm_engine_);
+    cognitive_cycle_ = std::make_shared<cognitive_cycle_manager>(atomspace_, llm_engine_);
     cognitive_cycle_->set_architecture_config(config);
 
     // Mark the system as initialized before populating the default knowledge
@@ -59,7 +59,7 @@ bool CognitiveSystem::initialize(const std::string& model_path, const Architectu
     return true;
 }
 
-void CognitiveSystem::shutdown() {
+void cognitive_system::shutdown() {
     if (!initialized_) {
         return;
     }
@@ -79,11 +79,11 @@ void CognitiveSystem::shutdown() {
     initialized_ = false;
 }
 
-bool CognitiveSystem::is_initialized() const {
+bool cognitive_system::is_initialized() const {
     return initialized_;
 }
 
-std::string CognitiveSystem::process_query(const std::string& query) {
+std::string cognitive_system::process_query(const std::string& query) {
     if (!initialized_) {
         return "Error: System not initialized";
     }
@@ -106,37 +106,37 @@ std::string CognitiveSystem::process_query(const std::string& query) {
     return response;
 }
 
-void CognitiveSystem::add_knowledge(const std::string& concept_name, const std::string& relation, const std::string& target) {
+void cognitive_system::add_knowledge(const std::string& concept_name, const std::string& relation, const std::string& target) {
     if (!initialized_) {
         return;
     }
 
-    auto concept_node = atomspace_->add_node(AtomType::CONCEPT_NODE, concept_name);
-    concept_node->set_truth_value(TruthValue(0.9, 0.8));
+    auto concept_node = atomspace_->add_node(atom_type::CONCEPT_NODE, concept_name);
+    concept_node->set_truth_value(truth_value(0.9, 0.8));
 
     if (!relation.empty() && !target.empty()) {
-        auto target_node = atomspace_->add_node(AtomType::CONCEPT_NODE, target);
-        auto relation_node = atomspace_->add_node(AtomType::PREDICATE_NODE, relation);
+        auto target_node = atomspace_->add_node(atom_type::CONCEPT_NODE, target);
+        auto relation_node = atomspace_->add_node(atom_type::PREDICATE_NODE, relation);
 
         std::vector<std::shared_ptr<Atom>> args = {concept_node, target_node};
-        auto list_link = atomspace_->add_link(AtomType::INHERITANCE_LINK, args);
+        auto list_link = atomspace_->add_link(atom_type::INHERITANCE_LINK, args);
 
         std::vector<std::shared_ptr<Atom>> eval_args = {relation_node, list_link};
-        auto evaluation = atomspace_->add_link(AtomType::EVALUATION_LINK, eval_args);
-        evaluation->set_truth_value(TruthValue(0.8, 0.7));
+        auto evaluation = atomspace_->add_link(atom_type::EVALUATION_LINK, eval_args);
+        evaluation->set_truth_value(truth_value(0.8, 0.7));
     }
 }
 
-void CognitiveSystem::set_goal(const std::string& goal_description, double priority) {
+void cognitive_system::set_goal(const std::string& goal_description, double priority) {
     if (!initialized_) {
         return;
     }
 
-    Goal goal(goal_description, priority);
+    goal_t goal(goal_description, priority);
     cognitive_cycle_->add_goal(goal);
 }
 
-void CognitiveSystem::configure_architecture(const ArchitectureConfig& config) {
+void cognitive_system::configure_architecture(const architecture_config& config) {
     current_config_ = config;
 
     if (initialized_ && cognitive_cycle_) {
@@ -148,12 +148,12 @@ void CognitiveSystem::configure_architecture(const ArchitectureConfig& config) {
     }
 }
 
-void CognitiveSystem::optimize_for_hardware() {
+void cognitive_system::optimize_for_hardware() {
     auto optimal_config = utils::create_optimal_config();
     configure_architecture(optimal_config);
 }
 
-void CognitiveSystem::add_spatial_knowledge(const std::string& object, const std::string& location) {
+void cognitive_system::add_spatial_knowledge(const std::string& object, const std::string& location) {
     if (!initialized_) {
         return;
     }
@@ -161,7 +161,7 @@ void CognitiveSystem::add_spatial_knowledge(const std::string& object, const std
     reasoning_engine_->add_spatial_knowledge(object, location);
 }
 
-void CognitiveSystem::add_causal_knowledge(const std::string& cause, const std::string& effect, double confidence) {
+void cognitive_system::add_causal_knowledge(const std::string& cause, const std::string& effect, double confidence) {
     if (!initialized_) {
         return;
     }
@@ -169,7 +169,7 @@ void CognitiveSystem::add_causal_knowledge(const std::string& cause, const std::
     reasoning_engine_->add_causal_relation(cause, effect, confidence);
 }
 
-std::vector<std::string> CognitiveSystem::plan_actions(const std::string& goal) const {
+std::vector<std::string> cognitive_system::plan_actions(const std::string& goal) const {
     if (!initialized_) {
         return {};
     }
@@ -177,8 +177,8 @@ std::vector<std::string> CognitiveSystem::plan_actions(const std::string& goal) 
     return reasoning_engine_->plan_actions(goal);
 }
 
-CognitiveSystem::SystemMetrics CognitiveSystem::get_metrics() const {
-    SystemMetrics metrics = {};
+cognitive_system::system_metrics cognitive_system::get_metrics() const {
+    system_metrics metrics = {};
 
     if (initialized_) {
         metrics.atomspace_size = atomspace_->size();
@@ -194,7 +194,7 @@ CognitiveSystem::SystemMetrics CognitiveSystem::get_metrics() const {
     return metrics;
 }
 
-void CognitiveSystem::start_continuous_processing() {
+void cognitive_system::start_continuous_processing() {
     if (!initialized_) {
         return;
     }
@@ -217,7 +217,7 @@ void CognitiveSystem::start_continuous_processing() {
     });
 }
 
-void CognitiveSystem::stop_continuous_processing() {
+void cognitive_system::stop_continuous_processing() {
     if (cognitive_cycle_) {
         cognitive_cycle_->stop();
     }
@@ -227,7 +227,7 @@ void CognitiveSystem::stop_continuous_processing() {
     }
 }
 
-void CognitiveSystem::save_knowledge(const std::string& filename) const {
+void cognitive_system::save_knowledge(const std::string& filename) const {
     if (!initialized_) {
         return;
     }
@@ -239,7 +239,7 @@ void CognitiveSystem::save_knowledge(const std::string& filename) const {
     }
 }
 
-bool CognitiveSystem::load_knowledge(const std::string& filename) {
+bool cognitive_system::load_knowledge(const std::string& filename) {
     if (!initialized_) {
         return false;
     }
@@ -249,12 +249,12 @@ bool CognitiveSystem::load_knowledge(const std::string& filename) {
         return false;
     }
 
-    // Parse lines matching the format produced by AtomSpace::to_string():
+    // Parse lines matching the format produced by atom_space::to_string():
     //   "  (<type_id> \"<name>\") (TV: ...)"
     // Currently we only restore CONCEPT_NODE atoms (matched by their numeric
     // type id), which keeps load_knowledge consistent with save_knowledge.
     const std::string concept_prefix =
-        "(" + std::to_string(static_cast<int>(AtomType::CONCEPT_NODE)) + " \"";
+        "(" + std::to_string(static_cast<int>(atom_type::CONCEPT_NODE)) + " \"";
     std::string line;
     while (std::getline(file, line)) {
         size_t prefix_pos = line.find(concept_prefix);
@@ -281,7 +281,7 @@ bool CognitiveSystem::load_knowledge(const std::string& filename) {
     return true;
 }
 
-void CognitiveSystem::setup_default_knowledge() {
+void cognitive_system::setup_default_knowledge() {
     // Add some basic cognitive concepts
     add_knowledge("artificial_intelligence", "is_a", "technology");
     add_knowledge("reasoning", "is_type_of", "cognitive_process");
@@ -296,7 +296,7 @@ void CognitiveSystem::setup_default_knowledge() {
     add_causal_knowledge("learning", "improved_performance", 0.8);
 }
 
-void CognitiveSystem::initialize_cognitive_components() {
+void cognitive_system::initialize_cognitive_components() {
     // Set default goals
     set_goal("Understand user queries", 0.8);
     set_goal("Provide helpful responses", 0.9);
@@ -309,39 +309,39 @@ void CognitiveSystem::initialize_cognitive_components() {
 // Utility functions implementation
 namespace utils {
 
-ArchitectureType detect_optimal_architecture() {
+architecture_type detect_optimal_architecture() {
     // Simple architecture detection
     #if defined(GGML_USE_CUDA) || defined(GGML_USE_VULKAN)
-        return ArchitectureType::GPU_ACCELERATED;
+        return architecture_type::GPU_ACCELERATED;
     #elif defined(__APPLE__) && defined(__arm64__)
-        return ArchitectureType::HYBRID_CPU_GPU;  // Apple Silicon
+        return architecture_type::HYBRID_CPU_GPU;  // Apple Silicon
     #elif defined(__ANDROID__)
-        return ArchitectureType::MOBILE_OPTIMIZED;
+        return architecture_type::MOBILE_OPTIMIZED;
     #else
-        return ArchitectureType::CPU_ONLY;
+        return architecture_type::CPU_ONLY;
     #endif
 }
 
-ArchitectureConfig create_optimal_config() {
-    ArchitectureConfig config;
+architecture_config create_optimal_config() {
+    architecture_config config;
     config.type = detect_optimal_architecture();
 
     switch (config.type) {
-        case ArchitectureType::GPU_ACCELERATED:
+        case architecture_type::GPU_ACCELERATED:
             config.memory_limit_mb = 8192;
             config.max_context_length = 4096;
             config.inference_budget_ms = 200.0;
             config.enable_speculative_decoding = true;
             break;
 
-        case ArchitectureType::HYBRID_CPU_GPU:
+        case architecture_type::HYBRID_CPU_GPU:
             config.memory_limit_mb = 6144;
             config.max_context_length = 3072;
             config.inference_budget_ms = 150.0;
             config.enable_speculative_decoding = true;
             break;
 
-        case ArchitectureType::MOBILE_OPTIMIZED:
+        case architecture_type::MOBILE_OPTIMIZED:
             config.memory_limit_mb = 2048;
             config.max_context_length = 1024;
             config.inference_budget_ms = 500.0;
@@ -359,7 +359,7 @@ ArchitectureConfig create_optimal_config() {
     return config;
 }
 
-std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& text, AtomSpace& atomspace) {
+std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& text, atom_space& atomspace) {
     std::vector<std::shared_ptr<Atom>> atoms;
 
     // Simple knowledge extraction - look for concepts in text
@@ -372,7 +372,7 @@ std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& 
                                  [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); }), word.end());
 
         if (word.length() > 3) {  // Only consider meaningful words
-            auto atom = atomspace.add_node(AtomType::CONCEPT_NODE, word);
+            auto atom = atomspace.add_node(atom_type::CONCEPT_NODE, word);
             atoms.push_back(atom);
         }
     }
@@ -396,7 +396,7 @@ std::string atoms_to_readable_text(const std::vector<std::shared_ptr<Atom>>& ato
     return readable.str();
 }
 
-void benchmark_inference_performance(LLMInferenceEngine& engine, const std::string& test_prompt) {
+void benchmark_inference_performance(llm_inference_engine& engine, const std::string& test_prompt) {
     if (!engine.is_model_loaded()) {
         return;
     }
@@ -414,7 +414,7 @@ void benchmark_inference_performance(LLMInferenceEngine& engine, const std::stri
     std::cout << "  Response length: " << response.length() << " chars\n";
 }
 
-void profile_cognitive_cycle(CognitiveCycleManager& cycle_manager, size_t num_cycles) {
+void profile_cognitive_cycle(cognitive_cycle_manager& cycle_manager, size_t num_cycles) {
     auto start = std::chrono::steady_clock::now();
 
     for (size_t i = 0; i < num_cycles; ++i) {

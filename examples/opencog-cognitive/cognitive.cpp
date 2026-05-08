@@ -14,7 +14,7 @@
  * integrated with llama.cpp for embodied, architecture-aware LLM inference.
  *
  * Features demonstrated:
- * - AtomSpace knowledge representation
+ * - atom_space knowledge representation
  * - Goal-driven cognitive processing
  * - Architecture-aware inference optimization
  * - Embodied reasoning capabilities
@@ -49,7 +49,7 @@ static void print_help() {
     std::cout << "\n";
 }
 
-static void print_system_status(const opencog::CognitiveSystem& system) {
+static void print_system_status(const opencog::cognitive_system& system) {
     auto metrics = system.get_metrics();
 
     std::cout << "\n=== System Status ===\n";
@@ -62,7 +62,7 @@ static void print_system_status(const opencog::CognitiveSystem& system) {
     std::cout << "\n";
 }
 
-static void show_active_goals(const opencog::CognitiveSystem& system) {
+static void show_active_goals(const opencog::cognitive_system& system) {
     auto goals = system.get_cognitive_cycle()->get_active_goals();
 
     std::cout << "\n=== Active Goals ===\n";
@@ -77,7 +77,7 @@ static void show_active_goals(const opencog::CognitiveSystem& system) {
     std::cout << "\n";
 }
 
-static void show_knowledge_base(const opencog::CognitiveSystem& system) {
+static void show_knowledge_base(const opencog::cognitive_system& system) {
     auto atomspace = system.get_atomspace();
 
     std::cout << "\n=== Knowledge Base ===\n";
@@ -109,25 +109,25 @@ int main(int argc, char ** argv) {
     // Initialize cognitive system
     std::cout << "Initializing OpenCog Cognitive System...\n";
 
-    opencog::CognitiveSystem cognitive_system;
+    opencog::cognitive_system cognitive_system;
 
     // Configure architecture based on available hardware
-    opencog::ArchitectureConfig config = opencog::utils::create_optimal_config();
+    opencog::architecture_config config = opencog::utils::create_optimal_config();
     std::cout << "Detected architecture: ";
     switch (config.type) {
-        case opencog::ArchitectureType::CPU_ONLY:
+        case opencog::architecture_type::CPU_ONLY:
             std::cout << "CPU-only\n";
             break;
-        case opencog::ArchitectureType::GPU_ACCELERATED:
+        case opencog::architecture_type::GPU_ACCELERATED:
             std::cout << "GPU-accelerated\n";
             break;
-        case opencog::ArchitectureType::HYBRID_CPU_GPU:
+        case opencog::architecture_type::HYBRID_CPU_GPU:
             std::cout << "Hybrid CPU/GPU\n";
             break;
-        case opencog::ArchitectureType::DISTRIBUTED:
+        case opencog::architecture_type::DISTRIBUTED:
             std::cout << "Distributed\n";
             break;
-        case opencog::ArchitectureType::MOBILE_OPTIMIZED:
+        case opencog::architecture_type::MOBILE_OPTIMIZED:
             std::cout << "Mobile-optimized\n";
             break;
     }

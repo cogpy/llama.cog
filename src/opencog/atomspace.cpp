@@ -16,10 +16,10 @@ std::string Link::to_string() const {
     return ss.str();
 }
 
-// AtomSpace implementation
-AtomSpace::AtomSpace() : next_handle_(1) {}
+// atom_space implementation
+atom_space::atom_space() : next_handle_(1) {}
 
-std::shared_ptr<Node> AtomSpace::add_node(AtomType type, const std::string& name) {
+std::shared_ptr<Node> atom_space::add_node(atom_type type, const std::string& name) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Check if node already exists
@@ -42,11 +42,12 @@ std::shared_ptr<Node> AtomSpace::add_node(AtomType type, const std::string& name
     return node;
 }
 
-std::shared_ptr<Link> AtomSpace::add_link(AtomType type, const std::vector<std::shared_ptr<Atom>>& outgoing) {
+std::shared_ptr<Link> atom_space::add_link(atom_type type, const std::vector<std::shared_ptr<Atom>>& outgoing) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Check if link already exists (based on type and outgoing set)
-    for (const auto& [handle, atom] : atoms_) {
+    for (const auto & kv : atoms_) {
+        const auto & atom = kv.second;
         if (atom->get_type() == type && atom->is_link()) {
             auto link = std::static_pointer_cast<Link>(atom);
             if (link->get_outgoing() == outgoing) {
@@ -64,13 +65,13 @@ std::shared_ptr<Link> AtomSpace::add_link(AtomType type, const std::vector<std::
     return link;
 }
 
-std::shared_ptr<Atom> AtomSpace::get_atom(uint64_t handle) const {
+std::shared_ptr<Atom> atom_space::get_atom(uint64_t handle) const {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = atoms_.find(handle);
     return (it != atoms_.end()) ? it->second : nullptr;
 }
 
-std::vector<std::shared_ptr<Atom>> AtomSpace::get_atoms_by_type(AtomType type) const {
+std::vector<std::shared_ptr<Atom>> atom_space::get_atoms_by_type(atom_type type) const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::shared_ptr<Atom>> result;
 
@@ -85,7 +86,7 @@ std::vector<std::shared_ptr<Atom>> AtomSpace::get_atoms_by_type(AtomType type) c
     return result;
 }
 
-std::vector<std::shared_ptr<Atom>> AtomSpace::get_atoms_by_name(const std::string& name) const {
+std::vector<std::shared_ptr<Atom>> atom_space::get_atoms_by_name(const std::string& name) const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::shared_ptr<Atom>> result;
 
@@ -100,12 +101,13 @@ std::vector<std::shared_ptr<Atom>> AtomSpace::get_atoms_by_name(const std::strin
     return result;
 }
 
-std::vector<std::shared_ptr<Atom>> AtomSpace::query(const std::string& pattern) const {
+std::vector<std::shared_ptr<Atom>> atom_space::query(const std::string& pattern) const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::shared_ptr<Atom>> result;
 
     // Simple pattern matching - look for atoms containing the pattern
-    for (const auto& [handle, atom] : atoms_) {
+    for (const auto & kv : atoms_) {
+        const auto & atom = kv.second;
         std::string atom_str = atom->to_string();
         if (atom_str.find(pattern) != std::string::npos) {
             result.push_back(atom);
@@ -115,12 +117,12 @@ std::vector<std::shared_ptr<Atom>> AtomSpace::query(const std::string& pattern) 
     return result;
 }
 
-std::vector<std::shared_ptr<Atom>> AtomSpace::get_attentional_focus(size_t max_atoms) const {
+std::vector<std::shared_ptr<Atom>> atom_space::get_attentional_focus(size_t max_atoms) const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::vector<std::shared_ptr<Atom>> all_atoms;
 
-    for (const auto& [handle, atom] : atoms_) {
-        all_atoms.push_back(atom);
+    for (const auto & kv : atoms_) {
+        all_atoms.push_back(kv.second);
     }
 
     // Sort by attention value (importance + urgency).
@@ -140,12 +142,13 @@ std::vector<std::shared_ptr<Atom>> AtomSpace::get_attentional_focus(size_t max_a
     return all_atoms;
 }
 
-void AtomSpace::update_attention_values() {
+void atom_space::update_attention_values() {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Simple attention updating - boost importance of recently accessed atoms
-    for (auto& [handle, atom] : atoms_) {
-        AttentionValue av = atom->get_attention_value();
+    for (auto & kv : atoms_) {
+        auto & atom = kv.second;
+        attention_value av = atom->get_attention_value();
 
         // Increase importance based on truth value confidence
         double tv_boost = atom->get_truth_value().confidence * 0.1;
@@ -155,11 +158,12 @@ void AtomSpace::update_attention_values() {
     }
 }
 
-void AtomSpace::decay_attention() {
+void atom_space::decay_attention() {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    for (auto& [handle, atom] : atoms_) {
-        AttentionValue av = atom->get_attention_value();
+    for (auto & kv : atoms_) {
+        auto & atom = kv.second;
+        attention_value av = atom->get_attention_value();
 
         // Decay attention over time
         av.importance *= 0.99;  // 1% decay per call
@@ -169,35 +173,36 @@ void AtomSpace::decay_attention() {
     }
 }
 
-size_t AtomSpace::size() const {
+size_t atom_space::size() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return atoms_.size();
 }
 
-size_t AtomSpace::get_num_nodes() const {
+size_t atom_space::get_num_nodes() const {
     std::lock_guard<std::mutex> lock(mutex_);
     size_t count = 0;
-    for (const auto& [handle, atom] : atoms_) {
-        if (atom->is_node()) count++;
+    for (const auto & kv : atoms_) {
+        if (kv.second->is_node()) count++;
     }
     return count;
 }
 
-size_t AtomSpace::get_num_links() const {
+size_t atom_space::get_num_links() const {
     std::lock_guard<std::mutex> lock(mutex_);
     size_t count = 0;
-    for (const auto& [handle, atom] : atoms_) {
-        if (atom->is_link()) count++;
+    for (const auto & kv : atoms_) {
+        if (kv.second->is_link()) count++;
     }
     return count;
 }
 
-std::string AtomSpace::to_string() const {
+std::string atom_space::to_string() const {
     std::lock_guard<std::mutex> lock(mutex_);
     std::stringstream ss;
 
     ss << "AtomSpace[" << atoms_.size() << " atoms]\n";
-    for (const auto& [handle, atom] : atoms_) {
+    for (const auto & kv : atoms_) {
+        const auto & atom = kv.second;
         ss << "  " << atom->to_string() << " (TV: "
            << atom->get_truth_value().strength << ","
            << atom->get_truth_value().confidence << ")\n";
@@ -206,7 +211,7 @@ std::string AtomSpace::to_string() const {
     return ss.str();
 }
 
-void AtomSpace::clear() {
+void atom_space::clear() {
     std::lock_guard<std::mutex> lock(mutex_);
     atoms_.clear();
     name_index_.clear();
@@ -214,11 +219,11 @@ void AtomSpace::clear() {
     next_handle_ = 1;
 }
 
-uint64_t AtomSpace::generate_handle() {
+uint64_t atom_space::generate_handle() {
     return next_handle_++;
 }
 
-void AtomSpace::add_to_indices(std::shared_ptr<Atom> atom) {
+void atom_space::add_to_indices(std::shared_ptr<Atom> atom) {
     uint64_t handle = atom->get_handle();
 
     // Type index
@@ -231,7 +236,7 @@ void AtomSpace::add_to_indices(std::shared_ptr<Atom> atom) {
     }
 }
 
-void AtomSpace::remove_from_indices(std::shared_ptr<Atom> atom) {
+void atom_space::remove_from_indices(std::shared_ptr<Atom> atom) {
     uint64_t handle = atom->get_handle();
 
     // Remove from type index

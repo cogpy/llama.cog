@@ -9,29 +9,29 @@
  * language model inference.
  *
  * Key Components:
- * - AtomSpace: Knowledge representation and storage
- * - CognitiveCycleManager: Goal-driven cognitive processing
- * - LLMInferenceEngine: Integration with llama.cpp for inference
- * - EmbodiedReasoningEngine: Spatial and temporal reasoning capabilities
+ * - atom_space: Knowledge representation and storage
+ * - cognitive_cycle_manager: goal-driven cognitive processing
+ * - llm_inference_engine: Integration with llama.cpp for inference
+ * - embodied_reasoning_engine: Spatial and temporal reasoning capabilities
  *
  * Usage Example:
  *
  *   #include "opencog/opencog.h"
  *
  *   // Create cognitive system
- *   auto atomspace = std::make_shared<opencog::AtomSpace>();
- *   auto llm_engine = std::make_shared<opencog::LLMInferenceEngine>();
- *   auto cognitive_cycle = std::make_shared<opencog::CognitiveCycleManager>(atomspace, llm_engine);
+ *   auto atomspace = std::make_shared<opencog::atom_space>();
+ *   auto llm_engine = std::make_shared<opencog::llm_inference_engine>();
+ *   auto cognitive_cycle = std::make_shared<opencog::cognitive_cycle_manager>(atomspace, llm_engine);
  *
  *   // Load model and configure architecture
- *   opencog::ArchitectureConfig config;
- *   config.type = opencog::ArchitectureType::CPU_ONLY;
+ *   opencog::architecture_config config;
+ *   config.type = opencog::architecture_type::CPU_ONLY;
  *   llm_engine->load_model("model.gguf", config);
  *   cognitive_cycle->set_architecture_config(config);
  *
  *   // Add knowledge and goals
- *   auto concept = atomspace->add_node(opencog::AtomType::CONCEPT_NODE, "AI_system");
- *   cognitive_cycle->add_goal(opencog::Goal("Understand user query", 0.8));
+ *   auto concept = atomspace->add_node(opencog::atom_type::CONCEPT_NODE, "AI_system");
+ *   cognitive_cycle->add_goal(opencog::goal_t("Understand user query", 0.8));
  *
  *   // Process input and generate response
  *   cognitive_cycle->process_input("What is artificial intelligence?");
@@ -51,13 +51,13 @@ namespace opencog {
 /**
  * Main OpenCog Cognitive System class that orchestrates all components
  */
-class CognitiveSystem {
+class cognitive_system {
 public:
-    CognitiveSystem();
-    ~CognitiveSystem();
+    cognitive_system();
+    ~cognitive_system();
 
     // System initialization
-    bool initialize(const std::string& model_path, const ArchitectureConfig& config = ArchitectureConfig());
+    bool initialize(const std::string& model_path, const architecture_config& config = architecture_config());
     void shutdown();
     bool is_initialized() const;
 
@@ -67,7 +67,7 @@ public:
     void set_goal(const std::string& goal_description, double priority = 0.5);
 
     // Architecture awareness
-    void configure_architecture(const ArchitectureConfig& config);
+    void configure_architecture(const architecture_config& config);
     void optimize_for_hardware();
 
     // Embodied reasoning
@@ -76,7 +76,7 @@ public:
     std::vector<std::string> plan_actions(const std::string& goal) const;
 
     // System monitoring
-    struct SystemMetrics {
+    struct system_metrics {
         size_t atomspace_size;
         size_t active_goals_count;
         size_t cycle_count;
@@ -85,7 +85,7 @@ public:
         double memory_usage_mb;
     };
 
-    SystemMetrics get_metrics() const;
+    system_metrics get_metrics() const;
 
     // Advanced features
     void start_continuous_processing();
@@ -94,21 +94,21 @@ public:
     bool load_knowledge(const std::string& filename);
 
     // Component access (for advanced usage)
-    std::shared_ptr<AtomSpace> get_atomspace() const { return atomspace_; }
-    std::shared_ptr<CognitiveCycleManager> get_cognitive_cycle() const { return cognitive_cycle_; }
-    std::shared_ptr<LLMInferenceEngine> get_llm_engine() const { return llm_engine_; }
-    std::shared_ptr<EmbodiedReasoningEngine> get_reasoning_engine() const { return reasoning_engine_; }
+    std::shared_ptr<atom_space> get_atomspace() const { return atomspace_; }
+    std::shared_ptr<cognitive_cycle_manager> get_cognitive_cycle() const { return cognitive_cycle_; }
+    std::shared_ptr<llm_inference_engine> get_llm_engine() const { return llm_engine_; }
+    std::shared_ptr<embodied_reasoning_engine> get_reasoning_engine() const { return reasoning_engine_; }
 
 private:
-    std::shared_ptr<AtomSpace> atomspace_;
-    std::shared_ptr<LLMInferenceEngine> llm_engine_;
-    std::shared_ptr<CognitiveCycleManager> cognitive_cycle_;
-    std::shared_ptr<EmbodiedReasoningEngine> reasoning_engine_;
-    std::shared_ptr<CognitivePromptEngine> prompt_engine_;
-    std::shared_ptr<CognitiveLLMMemory> memory_manager_;
+    std::shared_ptr<atom_space> atomspace_;
+    std::shared_ptr<llm_inference_engine> llm_engine_;
+    std::shared_ptr<cognitive_cycle_manager> cognitive_cycle_;
+    std::shared_ptr<embodied_reasoning_engine> reasoning_engine_;
+    std::shared_ptr<cognitive_prompt_engine> prompt_engine_;
+    std::shared_ptr<cognitive_llm_memory> memory_manager_;
 
     bool initialized_;
-    ArchitectureConfig current_config_;
+    architecture_config current_config_;
     std::thread cycle_thread_;
 
     void setup_default_knowledge();
@@ -121,16 +121,16 @@ private:
 namespace utils {
 
     // Architecture detection
-    ArchitectureType detect_optimal_architecture();
-    ArchitectureConfig create_optimal_config();
+    architecture_type detect_optimal_architecture();
+    architecture_config create_optimal_config();
 
     // Knowledge utilities
-    std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& text, AtomSpace& atomspace);
+    std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& text, atom_space& atomspace);
     std::string atoms_to_readable_text(const std::vector<std::shared_ptr<Atom>>& atoms);
 
     // Performance utilities
-    void benchmark_inference_performance(LLMInferenceEngine& engine, const std::string& test_prompt);
-    void profile_cognitive_cycle(CognitiveCycleManager& cycle_manager, size_t num_cycles);
+    void benchmark_inference_performance(llm_inference_engine& engine, const std::string& test_prompt);
+    void profile_cognitive_cycle(cognitive_cycle_manager& cycle_manager, size_t num_cycles);
 
 } // namespace utils
 

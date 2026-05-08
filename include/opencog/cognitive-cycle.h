@@ -12,41 +12,41 @@
 namespace opencog {
 
 // Forward declarations
-class LLMInferenceEngine;
-class GoalManager;
-class PerceptionProcessor;
+class llm_inference_engine;
+class goal_manager;
+class perception_processor;
 
 // Goal representation for cognitive processing
-struct Goal {
+struct goal_t {
     std::string description;
     double priority;
     std::chrono::steady_clock::time_point created;
     std::shared_ptr<Atom> goal_atom;
     bool completed;
 
-    Goal(const std::string& desc, double prio = 0.5)
+    goal_t(const std::string& desc, double prio = 0.5)
         : description(desc), priority(prio), created(std::chrono::steady_clock::now()), completed(false) {}
 
-    bool operator<(const Goal& other) const {
+    bool operator<(const goal_t& other) const {
         return priority < other.priority; // Max heap based on priority
     }
 };
 
 // Cognitive state tracking
-struct CognitiveState {
-    std::shared_ptr<AtomSpace> atomspace;
-    std::priority_queue<Goal> active_goals;
+struct cognitive_state {
+    std::shared_ptr<atom_space> atomspace;
+    std::priority_queue<goal_t> active_goals;
     std::vector<std::shared_ptr<Atom>> current_focus;
     std::string current_context;
     size_t cycle_count;
     std::chrono::steady_clock::time_point last_cycle;
 
-    CognitiveState(std::shared_ptr<AtomSpace> as)
+    cognitive_state(std::shared_ptr<atom_space> as)
         : atomspace(as), cycle_count(0), last_cycle(std::chrono::steady_clock::now()) {}
 };
 
 // Architecture awareness for different hardware/model configurations
-enum class ArchitectureType {
+enum class architecture_type {
     CPU_ONLY,
     GPU_ACCELERATED,
     HYBRID_CPU_GPU,
@@ -54,25 +54,25 @@ enum class ArchitectureType {
     MOBILE_OPTIMIZED
 };
 
-struct ArchitectureConfig {
-    ArchitectureType type;
+struct architecture_config {
+    architecture_type type;
     size_t memory_limit_mb;
     size_t max_context_length;
     double inference_budget_ms;  // Time budget per inference
     bool enable_speculative_decoding;
 
-    ArchitectureConfig()
-        : type(ArchitectureType::CPU_ONLY), memory_limit_mb(4096),
+    architecture_config()
+        : type(architecture_type::CPU_ONLY), memory_limit_mb(4096),
           max_context_length(2048), inference_budget_ms(100.0),
           enable_speculative_decoding(false) {}
 };
 
 // Core cognitive cycle manager
-class CognitiveCycleManager {
+class cognitive_cycle_manager {
 public:
-    CognitiveCycleManager(std::shared_ptr<AtomSpace> atomspace,
-                         std::shared_ptr<LLMInferenceEngine> llm_engine);
-    ~CognitiveCycleManager() = default;
+    cognitive_cycle_manager(std::shared_ptr<atom_space> atomspace,
+                         std::shared_ptr<llm_inference_engine> llm_engine);
+    ~cognitive_cycle_manager() = default;
 
     // Cognitive cycle execution
     void run_single_cycle();
@@ -80,13 +80,13 @@ public:
     void stop();
 
     // Goal management
-    void add_goal(const Goal& goal);
+    void add_goal(const goal_t& goal);
     void remove_goal(const std::string& description);
-    std::vector<Goal> get_active_goals() const;
+    std::vector<goal_t> get_active_goals() const;
 
     // Architecture awareness
-    void set_architecture_config(const ArchitectureConfig& config);
-    const ArchitectureConfig& get_architecture_config() const;
+    void set_architecture_config(const architecture_config& config);
+    const architecture_config& get_architecture_config() const;
 
     // Perception and action
     void process_input(const std::string& input);
@@ -96,7 +96,7 @@ public:
     // than by reference) so callers cannot observe partial mutations from
     // the continuous-processing worker thread; the snapshot is taken under
     // state_mutex_.
-    CognitiveState get_state() const;
+    cognitive_state get_state() const;
 
     // Configuration
     void set_cycle_frequency_hz(double frequency);
@@ -108,9 +108,9 @@ private:
     // worker thread launched by run_continuous(). All accesses must be
     // serialised through state_mutex_.
     mutable std::mutex state_mutex_;
-    CognitiveState state_;
-    std::shared_ptr<LLMInferenceEngine> llm_engine_;
-    ArchitectureConfig arch_config_;
+    cognitive_state state_;
+    std::shared_ptr<llm_inference_engine> llm_engine_;
+    architecture_config arch_config_;
 
     std::atomic<bool> running_;
     double cycle_frequency_hz_;
@@ -135,10 +135,10 @@ private:
 };
 
 // Embodied reasoning capabilities
-class EmbodiedReasoningEngine {
+class embodied_reasoning_engine {
 public:
-    EmbodiedReasoningEngine(std::shared_ptr<AtomSpace> atomspace);
-    ~EmbodiedReasoningEngine() = default;
+    embodied_reasoning_engine(std::shared_ptr<atom_space> atomspace);
+    ~embodied_reasoning_engine() = default;
 
     // Spatial and temporal reasoning
     void add_spatial_knowledge(const std::string& object, const std::string& location);
@@ -157,7 +157,7 @@ public:
     bool validate_action_feasibility(const std::string& action, const std::string& context) const;
 
 private:
-    std::shared_ptr<AtomSpace> atomspace_;
+    std::shared_ptr<atom_space> atomspace_;
     std::string current_context_;
 
     // Internal reasoning methods

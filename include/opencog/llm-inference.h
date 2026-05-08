@@ -12,13 +12,13 @@
 namespace opencog {
 
 // Integration layer between OpenCog and llama.cpp
-class LLMInferenceEngine {
+class llm_inference_engine {
 public:
-    LLMInferenceEngine();
-    ~LLMInferenceEngine();
+    llm_inference_engine();
+    ~llm_inference_engine();
 
     // Model management
-    bool load_model(const std::string& model_path, const ArchitectureConfig& config);
+    bool load_model(const std::string& model_path, const architecture_config& config);
     void unload_model();
     bool is_model_loaded() const;
 
@@ -29,8 +29,8 @@ public:
 
     // Architecture-aware inference
     std::string cognitive_inference(const std::string& input,
-                                  const CognitiveState& state,
-                                  const ArchitectureConfig& config);
+                                  const cognitive_state& state,
+                                  const architecture_config& config);
 
     // Reasoning-enhanced generation
     std::string reason_and_generate(const std::string& query,
@@ -45,7 +45,7 @@ public:
     void clear_context();
 
     // Performance monitoring
-    struct InferenceMetrics {
+    struct inference_metrics {
         double tokens_per_second;
         double memory_usage_mb;
         double processing_time_ms;
@@ -53,11 +53,11 @@ public:
         size_t context_length;
     };
 
-    InferenceMetrics get_last_metrics() const;
+    inference_metrics get_last_metrics() const;
 
     // Configuration
     void set_sampling_params(float temperature = 0.8f, float top_p = 0.9f, int top_k = 40);
-    void set_architecture_optimization(const ArchitectureConfig& config);
+    void set_architecture_optimization(const architecture_config& config);
 
 private:
     llama_model   * model_;
@@ -71,8 +71,8 @@ private:
     // llama_backend_free() twice -- once in the failure path, once via
     // unload_model() in the destructor.
     bool backend_initialized_ = false;
-    InferenceMetrics last_metrics_;
-    ArchitectureConfig current_config_;
+    inference_metrics last_metrics_;
+    architecture_config current_config_;
 
     // Cognitive enhancement methods
     std::string atoms_to_context_string(const std::vector<std::shared_ptr<Atom>>& atoms) const;
@@ -91,10 +91,10 @@ private:
 };
 
 // Cognitive prompt engineering
-class CognitivePromptEngine {
+class cognitive_prompt_engine {
 public:
-    CognitivePromptEngine(std::shared_ptr<AtomSpace> atomspace);
-    ~CognitivePromptEngine() = default;
+    cognitive_prompt_engine(std::shared_ptr<atom_space> atomspace);
+    ~cognitive_prompt_engine() = default;
 
     // Prompt enhancement with cognitive context
     std::string enhance_prompt(const std::string& base_prompt,
@@ -102,7 +102,7 @@ public:
                              const std::string& reasoning_context = "") const;
 
     // Goal-directed prompting
-    std::string create_goal_prompt(const Goal& goal,
+    std::string create_goal_prompt(const goal_t& goal,
                                  const std::vector<std::shared_ptr<Atom>>& knowledge) const;
 
     // Chain-of-thought reasoning prompts
@@ -115,18 +115,18 @@ public:
                                      const std::vector<std::shared_ptr<Atom>>& spatial_knowledge) const;
 
 private:
-    std::shared_ptr<AtomSpace> atomspace_;
+    std::shared_ptr<atom_space> atomspace_;
 
     std::string format_atoms_as_knowledge(const std::vector<std::shared_ptr<Atom>>& atoms) const;
     std::string create_reasoning_template() const;
     std::string create_embodied_template() const;
 };
 
-// Memory integration with AtomSpace
-class CognitiveLLMMemory {
+// Memory integration with atom_space
+class cognitive_llm_memory {
 public:
-    CognitiveLLMMemory(std::shared_ptr<AtomSpace> atomspace);
-    ~CognitiveLLMMemory() = default;
+    cognitive_llm_memory(std::shared_ptr<atom_space> atomspace);
+    ~cognitive_llm_memory() = default;
 
     // Memory encoding and retrieval
     void encode_interaction(const std::string& input, const std::string& output);
@@ -144,7 +144,7 @@ public:
     void decay_old_memories(double decay_rate = 0.01);
 
 private:
-    std::shared_ptr<AtomSpace> atomspace_;
+    std::shared_ptr<atom_space> atomspace_;
 
     std::shared_ptr<Atom> create_interaction_atom(const std::string& input, const std::string& output);
     std::shared_ptr<Atom> create_reasoning_atom(const std::string& premise, const std::string& conclusion);

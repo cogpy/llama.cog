@@ -9,16 +9,16 @@
 
 namespace opencog {
 
-// LLMInferenceEngine implementation
-LLMInferenceEngine::LLMInferenceEngine()
+// llm_inference_engine implementation
+llm_inference_engine::llm_inference_engine()
     : model_(nullptr), context_(nullptr), sampler_(nullptr), model_loaded_(false) {
 }
 
-LLMInferenceEngine::~LLMInferenceEngine() {
+llm_inference_engine::~llm_inference_engine() {
     unload_model();
 }
 
-bool LLMInferenceEngine::load_model(const std::string& model_path, const ArchitectureConfig& config) {
+bool llm_inference_engine::load_model(const std::string& model_path, const architecture_config& config) {
     if (model_loaded_) {
         unload_model();
     }
@@ -41,13 +41,13 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
     llama_model_params model_params = llama_model_default_params();
 
     switch (config.type) {
-        case ArchitectureType::GPU_ACCELERATED:
+        case architecture_type::GPU_ACCELERATED:
             model_params.n_gpu_layers = 99; // Use maximum GPU layers
             break;
-        case ArchitectureType::HYBRID_CPU_GPU:
+        case architecture_type::HYBRID_CPU_GPU:
             model_params.n_gpu_layers = 20; // Use some GPU layers
             break;
-        case ArchitectureType::MOBILE_OPTIMIZED:
+        case architecture_type::MOBILE_OPTIMIZED:
             model_params.n_gpu_layers = 0;  // CPU only for mobile
             break;
         default:
@@ -95,7 +95,7 @@ bool LLMInferenceEngine::load_model(const std::string& model_path, const Archite
     return true;
 }
 
-void LLMInferenceEngine::unload_model() {
+void llm_inference_engine::unload_model() {
     if (sampler_) {
         llama_sampler_free(sampler_);
         sampler_ = nullptr;
@@ -118,11 +118,11 @@ void LLMInferenceEngine::unload_model() {
     model_loaded_ = false;
 }
 
-bool LLMInferenceEngine::is_model_loaded() const {
+bool llm_inference_engine::is_model_loaded() const {
     return model_loaded_;
 }
 
-std::string LLMInferenceEngine::generate_response(const std::string& prompt,
+std::string llm_inference_engine::generate_response(const std::string& prompt,
                                                 const std::vector<std::shared_ptr<Atom>>& context_atoms,
                                                 size_t max_tokens) {
     if (!model_loaded_) {
@@ -217,9 +217,9 @@ std::string LLMInferenceEngine::generate_response(const std::string& prompt,
     return response;
 }
 
-std::string LLMInferenceEngine::cognitive_inference(const std::string& input,
-                                                  const CognitiveState& state,
-                                                  const ArchitectureConfig& config) {
+std::string llm_inference_engine::cognitive_inference(const std::string& input,
+                                                  const cognitive_state& state,
+                                                  const architecture_config& config) {
     if (!model_loaded_) {
         return "Error: No model loaded";
     }
@@ -243,7 +243,7 @@ std::string LLMInferenceEngine::cognitive_inference(const std::string& input,
         auto temp_goals = state.active_goals;
         int goal_count = 0;
         while (!temp_goals.empty() && goal_count < 3) {
-            Goal g = temp_goals.top();
+            goal_t g = temp_goals.top();
             temp_goals.pop();
             cognitive_prompt << "- " << g.description << " (priority: " << g.priority << ")\n";
             goal_count++;
@@ -260,7 +260,7 @@ std::string LLMInferenceEngine::cognitive_inference(const std::string& input,
     return generate_response(cognitive_prompt.str(), state.current_focus, max_tokens);
 }
 
-std::string LLMInferenceEngine::reason_and_generate(const std::string& query,
+std::string llm_inference_engine::reason_and_generate(const std::string& query,
                                                   const std::vector<std::shared_ptr<Atom>>& knowledge_base) {
     std::stringstream reasoning_prompt;
     reasoning_prompt << "Given the following knowledge, reason step by step to answer the query.\n\n";
@@ -276,7 +276,7 @@ std::string LLMInferenceEngine::reason_and_generate(const std::string& query,
     return generate_response(reasoning_prompt.str(), knowledge_base, 256);
 }
 
-std::vector<float> LLMInferenceEngine::get_embeddings(const std::string& text) {
+std::vector<float> llm_inference_engine::get_embeddings(const std::string& text) {
     if (!model_loaded_) {
         return {};
     }
@@ -306,7 +306,7 @@ std::vector<float> LLMInferenceEngine::get_embeddings(const std::string& text) {
     return embeddings;
 }
 
-double LLMInferenceEngine::compute_semantic_similarity(const std::string& text1, const std::string& text2) {
+double llm_inference_engine::compute_semantic_similarity(const std::string& text1, const std::string& text2) {
     auto emb1 = get_embeddings(text1);
     auto emb2 = get_embeddings(text2);
 
@@ -332,23 +332,23 @@ double LLMInferenceEngine::compute_semantic_similarity(const std::string& text1,
     return dot_product / (std::sqrt(norm1) * std::sqrt(norm2));
 }
 
-void LLMInferenceEngine::update_context(const std::vector<std::shared_ptr<Atom>>& atoms) {
+void llm_inference_engine::update_context(const std::vector<std::shared_ptr<Atom>>& atoms) {
     // This would update the LLM context with relevant atoms
     // For now, we'll just store them for use in the next generation
     (void)atoms;
 }
 
-void LLMInferenceEngine::clear_context() {
+void llm_inference_engine::clear_context() {
     if (context_) {
         llama_memory_clear(llama_get_memory(context_), true);
     }
 }
 
-LLMInferenceEngine::InferenceMetrics LLMInferenceEngine::get_last_metrics() const {
+llm_inference_engine::inference_metrics llm_inference_engine::get_last_metrics() const {
     return last_metrics_;
 }
 
-void LLMInferenceEngine::set_sampling_params(float temperature, float top_p, int top_k) {
+void llm_inference_engine::set_sampling_params(float temperature, float top_p, int top_k) {
     if (sampler_) {
         llama_sampler_free(sampler_);
     }
@@ -361,31 +361,31 @@ void LLMInferenceEngine::set_sampling_params(float temperature, float top_p, int
     llama_sampler_chain_add(sampler_, llama_sampler_init_dist(LLAMA_DEFAULT_SEED));
 }
 
-void LLMInferenceEngine::set_architecture_optimization(const ArchitectureConfig& config) {
+void llm_inference_engine::set_architecture_optimization(const architecture_config& config) {
     current_config_ = config;
 
     switch (config.type) {
-        case ArchitectureType::CPU_ONLY:
+        case architecture_type::CPU_ONLY:
             optimize_for_cpu();
             break;
-        case ArchitectureType::GPU_ACCELERATED:
+        case architecture_type::GPU_ACCELERATED:
             optimize_for_gpu();
             break;
-        case ArchitectureType::HYBRID_CPU_GPU:
+        case architecture_type::HYBRID_CPU_GPU:
             optimize_for_hybrid();
             break;
-        case ArchitectureType::DISTRIBUTED:
+        case architecture_type::DISTRIBUTED:
             // Distributed optimizations - placeholder
             optimize_for_hybrid();  // Use hybrid as fallback
             break;
-        case ArchitectureType::MOBILE_OPTIMIZED:
+        case architecture_type::MOBILE_OPTIMIZED:
             optimize_for_mobile();
             break;
     }
 }
 
 // Private methods
-std::string LLMInferenceEngine::atoms_to_context_string(const std::vector<std::shared_ptr<Atom>>& atoms) const {
+std::string llm_inference_engine::atoms_to_context_string(const std::vector<std::shared_ptr<Atom>>& atoms) const {
     std::stringstream ss;
     ss << "Knowledge context:\n";
     for (const auto& atom : atoms) {
@@ -394,7 +394,7 @@ std::string LLMInferenceEngine::atoms_to_context_string(const std::vector<std::s
     return ss.str();
 }
 
-std::string LLMInferenceEngine::format_prompt_with_reasoning(const std::string& prompt,
+std::string llm_inference_engine::format_prompt_with_reasoning(const std::string& prompt,
                                                            const std::vector<std::shared_ptr<Atom>>& reasoning_atoms) const {
     std::stringstream formatted;
     formatted << atoms_to_context_string(reasoning_atoms);
@@ -402,27 +402,27 @@ std::string LLMInferenceEngine::format_prompt_with_reasoning(const std::string& 
     return formatted.str();
 }
 
-void LLMInferenceEngine::optimize_for_cpu() {
+void llm_inference_engine::optimize_for_cpu() {
     // CPU-specific optimizations
     set_sampling_params(0.7f, 0.9f, 30);  // Faster sampling
 }
 
-void LLMInferenceEngine::optimize_for_gpu() {
+void llm_inference_engine::optimize_for_gpu() {
     // GPU-specific optimizations
     set_sampling_params(0.8f, 0.95f, 50);  // Higher quality sampling
 }
 
-void LLMInferenceEngine::optimize_for_hybrid() {
+void llm_inference_engine::optimize_for_hybrid() {
     // Hybrid optimizations
     set_sampling_params(0.8f, 0.9f, 40);  // Balanced sampling
 }
 
-void LLMInferenceEngine::optimize_for_mobile() {
+void llm_inference_engine::optimize_for_mobile() {
     // Mobile optimizations - prioritize speed and efficiency
     set_sampling_params(0.6f, 0.8f, 20);  // Fastest sampling
 }
 
-void LLMInferenceEngine::update_metrics(const std::chrono::steady_clock::time_point& start_time,
+void llm_inference_engine::update_metrics(const std::chrono::steady_clock::time_point& start_time,
                                       size_t tokens_generated) {
     auto end_time = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -434,12 +434,12 @@ void LLMInferenceEngine::update_metrics(const std::chrono::steady_clock::time_po
     last_metrics_.memory_usage_mb = 0;  // Would need system-specific implementation
 }
 
-// CognitivePromptEngine implementation
-CognitivePromptEngine::CognitivePromptEngine(std::shared_ptr<AtomSpace> atomspace)
+// cognitive_prompt_engine implementation
+cognitive_prompt_engine::cognitive_prompt_engine(std::shared_ptr<atom_space> atomspace)
     : atomspace_(atomspace) {
 }
 
-std::string CognitivePromptEngine::enhance_prompt(const std::string& base_prompt,
+std::string cognitive_prompt_engine::enhance_prompt(const std::string& base_prompt,
                                                 const std::vector<std::shared_ptr<Atom>>& relevant_atoms,
                                                 const std::string& reasoning_context) const {
     std::stringstream enhanced;
@@ -460,7 +460,7 @@ std::string CognitivePromptEngine::enhance_prompt(const std::string& base_prompt
     return enhanced.str();
 }
 
-std::string CognitivePromptEngine::create_goal_prompt(const Goal& goal,
+std::string cognitive_prompt_engine::create_goal_prompt(const goal_t& goal,
                                                     const std::vector<std::shared_ptr<Atom>>& knowledge) const {
     std::stringstream goal_prompt;
 
@@ -478,7 +478,7 @@ std::string CognitivePromptEngine::create_goal_prompt(const Goal& goal,
     return goal_prompt.str();
 }
 
-std::string CognitivePromptEngine::create_reasoning_chain(const std::string& problem,
+std::string cognitive_prompt_engine::create_reasoning_chain(const std::string& problem,
                                                         const std::vector<std::shared_ptr<Atom>>& facts) const {
     std::stringstream chain_prompt;
 
@@ -495,7 +495,7 @@ std::string CognitivePromptEngine::create_reasoning_chain(const std::string& pro
     return chain_prompt.str();
 }
 
-std::string CognitivePromptEngine::create_embodied_prompt(const std::string& action,
+std::string cognitive_prompt_engine::create_embodied_prompt(const std::string& action,
                                                         const std::string& environment_context,
                                                         const std::vector<std::shared_ptr<Atom>>& spatial_knowledge) const {
     std::stringstream embodied_prompt;
@@ -514,7 +514,7 @@ std::string CognitivePromptEngine::create_embodied_prompt(const std::string& act
     return embodied_prompt.str();
 }
 
-std::string CognitivePromptEngine::format_atoms_as_knowledge(const std::vector<std::shared_ptr<Atom>>& atoms) const {
+std::string cognitive_prompt_engine::format_atoms_as_knowledge(const std::vector<std::shared_ptr<Atom>>& atoms) const {
     std::stringstream knowledge;
     for (const auto& atom : atoms) {
         knowledge << "- " << atom->to_string() << "\n";
@@ -522,34 +522,34 @@ std::string CognitivePromptEngine::format_atoms_as_knowledge(const std::vector<s
     return knowledge.str();
 }
 
-std::string CognitivePromptEngine::create_reasoning_template() const {
+std::string cognitive_prompt_engine::create_reasoning_template() const {
     return "You are an AI system capable of step-by-step logical reasoning. "
            "For each problem, break down your thinking into clear steps.";
 }
 
-std::string CognitivePromptEngine::create_embodied_template() const {
+std::string cognitive_prompt_engine::create_embodied_template() const {
     return "You are an embodied AI system that can reason about physical actions and spatial relationships. "
            "Consider the physical constraints and possibilities when planning actions.";
 }
 
-// CognitiveLLMMemory implementation
-CognitiveLLMMemory::CognitiveLLMMemory(std::shared_ptr<AtomSpace> atomspace)
+// cognitive_llm_memory implementation
+cognitive_llm_memory::cognitive_llm_memory(std::shared_ptr<atom_space> atomspace)
     : atomspace_(atomspace) {
 }
 
-void CognitiveLLMMemory::encode_interaction(const std::string& input, const std::string& output) {
+void cognitive_llm_memory::encode_interaction(const std::string& input, const std::string& output) {
     auto interaction_atom = create_interaction_atom(input, output);
-    interaction_atom->set_truth_value(TruthValue(0.8, 0.9));  // High confidence in recorded interactions
-    interaction_atom->set_attention_value(AttentionValue(0.7, 0.5));
+    interaction_atom->set_truth_value(truth_value(0.8, 0.9));  // High confidence in recorded interactions
+    interaction_atom->set_attention_value(attention_value(0.7, 0.5));
 }
 
-void CognitiveLLMMemory::encode_reasoning_step(const std::string& premise, const std::string& conclusion) {
+void cognitive_llm_memory::encode_reasoning_step(const std::string& premise, const std::string& conclusion) {
     auto reasoning_atom = create_reasoning_atom(premise, conclusion);
-    reasoning_atom->set_truth_value(TruthValue(0.9, 0.8));  // High confidence in reasoning steps
-    reasoning_atom->set_attention_value(AttentionValue(0.8, 0.6));
+    reasoning_atom->set_truth_value(truth_value(0.9, 0.8));  // High confidence in reasoning steps
+    reasoning_atom->set_attention_value(attention_value(0.8, 0.6));
 }
 
-std::vector<std::shared_ptr<Atom>> CognitiveLLMMemory::retrieve_relevant_memories(const std::string& query,
+std::vector<std::shared_ptr<Atom>> cognitive_llm_memory::retrieve_relevant_memories(const std::string& query,
                                                                                 size_t max_memories) const {
     auto all_memories = atomspace_->query(query);
 
@@ -566,11 +566,11 @@ std::vector<std::shared_ptr<Atom>> CognitiveLLMMemory::retrieve_relevant_memorie
     return all_memories;
 }
 
-void CognitiveLLMMemory::learn_from_feedback(const std::string& interaction, bool positive_feedback) {
+void cognitive_llm_memory::learn_from_feedback(const std::string& interaction, bool positive_feedback) {
     auto memories = atomspace_->query(interaction);
 
     for (auto memory : memories) {
-        TruthValue tv = memory->get_truth_value();
+        truth_value tv = memory->get_truth_value();
         if (positive_feedback) {
             tv.strength = std::min(1.0, tv.strength + 0.1);
             tv.confidence = std::min(1.0, tv.confidence + 0.05);
@@ -582,58 +582,58 @@ void CognitiveLLMMemory::learn_from_feedback(const std::string& interaction, boo
     }
 }
 
-void CognitiveLLMMemory::update_concept_strengths(const std::vector<std::string>& concepts, double delta) {
+void cognitive_llm_memory::update_concept_strengths(const std::vector<std::string>& concepts, double delta) {
     for (const std::string& concept_name : concepts) {
         auto concept_atoms = atomspace_->get_atoms_by_name(concept_name);
         for (auto atom : concept_atoms) {
-            TruthValue tv = atom->get_truth_value();
+            truth_value tv = atom->get_truth_value();
             tv.strength = std::max(0.0, std::min(1.0, tv.strength + delta));
             atom->set_truth_value(tv);
         }
     }
 }
 
-void CognitiveLLMMemory::consolidate_memories() {
+void cognitive_llm_memory::consolidate_memories() {
     // Identify similar memories and merge them
     auto all_atoms = atomspace_->get_attentional_focus(1000);
 
     // Simple consolidation - boost attention of frequently accessed concepts
     for (auto atom : all_atoms) {
-        AttentionValue av = atom->get_attention_value();
+        attention_value av = atom->get_attention_value();
         av.importance *= 1.01;  // Small boost for active memories
         atom->set_attention_value(av);
     }
 }
 
-void CognitiveLLMMemory::decay_old_memories(double decay_rate) {
+void cognitive_llm_memory::decay_old_memories(double decay_rate) {
     // The decay magnitude is currently hard-coded inside
-    // AtomSpace::decay_attention(); the rate parameter is reserved for a
+    // atom_space::decay_attention(); the rate parameter is reserved for a
     // future implementation that scales the decay per call.
     (void)decay_rate;
     atomspace_->decay_attention();
 }
 
-std::shared_ptr<Atom> CognitiveLLMMemory::create_interaction_atom(const std::string& input, const std::string& output) {
-    auto input_node = atomspace_->add_node(AtomType::CONCEPT_NODE, "input:" + input);
-    auto output_node = atomspace_->add_node(AtomType::CONCEPT_NODE, "output:" + output);
-    auto interaction_predicate = atomspace_->add_node(AtomType::PREDICATE_NODE, "interaction");
+std::shared_ptr<Atom> cognitive_llm_memory::create_interaction_atom(const std::string& input, const std::string& output) {
+    auto input_node = atomspace_->add_node(atom_type::CONCEPT_NODE, "input:" + input);
+    auto output_node = atomspace_->add_node(atom_type::CONCEPT_NODE, "output:" + output);
+    auto interaction_predicate = atomspace_->add_node(atom_type::PREDICATE_NODE, "interaction");
 
     std::vector<std::shared_ptr<Atom>> args = {input_node, output_node};
-    auto list_link = atomspace_->add_link(AtomType::INHERITANCE_LINK, args);
+    auto list_link = atomspace_->add_link(atom_type::INHERITANCE_LINK, args);
 
     std::vector<std::shared_ptr<Atom>> eval_args = {interaction_predicate, list_link};
-    return atomspace_->add_link(AtomType::EVALUATION_LINK, eval_args);
+    return atomspace_->add_link(atom_type::EVALUATION_LINK, eval_args);
 }
 
-std::shared_ptr<Atom> CognitiveLLMMemory::create_reasoning_atom(const std::string& premise, const std::string& conclusion) {
-    auto premise_node = atomspace_->add_node(AtomType::CONCEPT_NODE, premise);
-    auto conclusion_node = atomspace_->add_node(AtomType::CONCEPT_NODE, conclusion);
+std::shared_ptr<Atom> cognitive_llm_memory::create_reasoning_atom(const std::string& premise, const std::string& conclusion) {
+    auto premise_node = atomspace_->add_node(atom_type::CONCEPT_NODE, premise);
+    auto conclusion_node = atomspace_->add_node(atom_type::CONCEPT_NODE, conclusion);
 
     std::vector<std::shared_ptr<Atom>> args = {premise_node, conclusion_node};
-    return atomspace_->add_link(AtomType::IMPLICATION_LINK, args);
+    return atomspace_->add_link(atom_type::IMPLICATION_LINK, args);
 }
 
-double CognitiveLLMMemory::compute_relevance_score(std::shared_ptr<Atom> memory, const std::string& query) const {
+double cognitive_llm_memory::compute_relevance_score(std::shared_ptr<Atom> memory, const std::string& query) const {
     // Simple relevance scoring based on string similarity and attention
     std::string memory_str = memory->to_string();
 
