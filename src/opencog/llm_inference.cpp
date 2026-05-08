@@ -322,10 +322,8 @@ void LLMInferenceEngine::update_context(const std::vector<std::shared_ptr<Atom>>
 }
 
 void LLMInferenceEngine::clear_context() {
-    // Clear the LLM context - placeholder implementation since kv_cache_clear may not exist
     if (context_) {
-        // Note: KV cache clearing might need different approach in current API
-        // For now, we'll skip this or implement differently
+        llama_memory_clear(llama_get_memory(context_), true);
     }
 }
 
