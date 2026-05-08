@@ -60,9 +60,9 @@ public:
     void set_architecture_optimization(const ArchitectureConfig& config);
 
 private:
-    struct llama_model* model_;
-    struct llama_context* context_;
-    struct llama_sampler* sampler_;
+    llama_model   * model_;
+    llama_context * context_;
+    llama_sampler * sampler_;
 
     bool model_loaded_;
     InferenceMetrics last_metrics_;
