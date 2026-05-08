@@ -187,6 +187,7 @@ std::string LLMInferenceEngine::generate_response(const std::string& prompt,
         batch.n_tokens = 1;
 
         if (llama_decode(context_, batch) != 0) {
+            tokens_generated++;
             break;
         }
 
