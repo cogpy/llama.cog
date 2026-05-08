@@ -21,7 +21,7 @@
  * - Memory and learning from interactions
  */
 
-void print_banner() {
+static void print_banner() {
     std::cout << "\n";
     std::cout << "╔══════════════════════════════════════════════════════════════╗\n";
     std::cout << "║                  OpenCog Cognitive LLM                       ║\n";
@@ -30,7 +30,7 @@ void print_banner() {
     std::cout << "\n";
 }
 
-void print_help() {
+static void print_help() {
     std::cout << "Commands:\n";
     std::cout << "  help          - Show this help message\n";
     std::cout << "  status        - Show system status and metrics\n";
@@ -49,7 +49,7 @@ void print_help() {
     std::cout << "\n";
 }
 
-void print_system_status(const opencog::CognitiveSystem& system) {
+static void print_system_status(const opencog::CognitiveSystem& system) {
     auto metrics = system.get_metrics();
 
     std::cout << "\n=== System Status ===\n";
@@ -62,7 +62,7 @@ void print_system_status(const opencog::CognitiveSystem& system) {
     std::cout << "\n";
 }
 
-void show_active_goals(const opencog::CognitiveSystem& system) {
+static void show_active_goals(const opencog::CognitiveSystem& system) {
     auto goals = system.get_cognitive_cycle()->get_active_goals();
 
     std::cout << "\n=== Active Goals ===\n";
@@ -77,7 +77,7 @@ void show_active_goals(const opencog::CognitiveSystem& system) {
     std::cout << "\n";
 }
 
-void show_knowledge_base(const opencog::CognitiveSystem& system) {
+static void show_knowledge_base(const opencog::CognitiveSystem& system) {
     auto atomspace = system.get_atomspace();
 
     std::cout << "\n=== Knowledge Base ===\n";

@@ -318,6 +318,7 @@ double LLMInferenceEngine::compute_semantic_similarity(const std::string& text1,
 void LLMInferenceEngine::update_context(const std::vector<std::shared_ptr<Atom>>& atoms) {
     // This would update the LLM context with relevant atoms
     // For now, we'll just store them for use in the next generation
+    (void)atoms;
 }
 
 void LLMInferenceEngine::clear_context() {
@@ -590,6 +591,10 @@ void CognitiveLLMMemory::consolidate_memories() {
 }
 
 void CognitiveLLMMemory::decay_old_memories(double decay_rate) {
+    // The decay magnitude is currently hard-coded inside
+    // AtomSpace::decay_attention(); the rate parameter is reserved for a
+    // future implementation that scales the decay per call.
+    (void)decay_rate;
     atomspace_->decay_attention();
 }
 
