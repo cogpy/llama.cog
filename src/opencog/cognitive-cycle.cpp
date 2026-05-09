@@ -72,20 +72,20 @@ void cognitive_cycle_manager::stop() {
     running_ = false;
 }
 
-void cognitive_cycle_manager::add_goal(const goal_t& goal) {
+void cognitive_cycle_manager::add_goal(const goal& g) {
     std::lock_guard<std::mutex> lock(state_mutex_);
-    state_.active_goals.push(goal);
+    state_.active_goals.push(g);
 }
 
 void cognitive_cycle_manager::remove_goal(const std::string& description) {
     std::lock_guard<std::mutex> lock(state_mutex_);
 
     // Rebuild priority queue without the specified goal
-    std::priority_queue<goal_t> new_goals;
+    std::priority_queue<goal> new_goals;
     auto temp_goals = state_.active_goals;
 
     while (!temp_goals.empty()) {
-        goal_t g = temp_goals.top();
+        goal g = temp_goals.top();
         temp_goals.pop();
         if (g.description != description) {
             new_goals.push(g);
@@ -95,10 +95,10 @@ void cognitive_cycle_manager::remove_goal(const std::string& description) {
     state_.active_goals = new_goals;
 }
 
-std::vector<goal_t> cognitive_cycle_manager::get_active_goals() const {
+std::vector<goal> cognitive_cycle_manager::get_active_goals() const {
     std::lock_guard<std::mutex> lock(state_mutex_);
 
-    std::vector<goal_t> goals;
+    std::vector<goal> goals;
     auto temp_goals = state_.active_goals;
 
     while (!temp_goals.empty()) {
@@ -134,7 +134,7 @@ void cognitive_cycle_manager::process_input(const std::string& input) {
     // (non-recursive) mutex.
     std::lock_guard<std::mutex> lock(state_mutex_);
     state_.current_context = input;
-    state_.active_goals.push(goal_t("Process input: " + input, 0.8));
+    state_.active_goals.push(goal("Process input: " + input, 0.8));
 }
 
 std::string cognitive_cycle_manager::generate_response(const std::string& context) {
@@ -182,7 +182,7 @@ void cognitive_cycle_manager::perception_phase() {
 void cognitive_cycle_manager::goal_selection_phase() {
     // Select highest priority goal for processing
     if (!state_.active_goals.empty()) {
-        const goal_t& current_goal = state_.active_goals.top();
+        const goal& current_goal = state_.active_goals.top();
 
         // Ensure a corresponding goal atom exists in the atom_space.
         // add_node is idempotent (it returns the existing atom for the same
@@ -266,10 +266,10 @@ void cognitive_cycle_manager::update_attentional_focus() {
 void cognitive_cycle_manager::process_goal_completion() {
     // Check if any goals have been completed
     auto temp_goals = state_.active_goals;
-    std::priority_queue<goal_t> remaining_goals;
+    std::priority_queue<goal> remaining_goals;
 
     while (!temp_goals.empty()) {
-        goal_t g = temp_goals.top();
+        goal g = temp_goals.top();
         temp_goals.pop();
 
         // Simple completion check - in reality this would be more sophisticated
@@ -282,7 +282,7 @@ void cognitive_cycle_manager::process_goal_completion() {
     state_.active_goals = remaining_goals;
 }
 
-std::vector<std::shared_ptr<Atom>> cognitive_cycle_manager::select_relevant_knowledge(const std::string& context) const {
+std::vector<std::shared_ptr<atom>> cognitive_cycle_manager::select_relevant_knowledge(const std::string& context) const {
     // Query atomspace for relevant atoms
     auto query_atoms = state_.atomspace->query(context);
 
@@ -290,7 +290,7 @@ std::vector<std::shared_ptr<Atom>> cognitive_cycle_manager::select_relevant_know
     auto focus_atoms = state_.atomspace->get_attentional_focus(20);
 
     // Combine and deduplicate
-    std::vector<std::shared_ptr<Atom>> relevant;
+    std::vector<std::shared_ptr<atom>> relevant;
     relevant.insert(relevant.end(), query_atoms.begin(), query_atoms.end());
     relevant.insert(relevant.end(), focus_atoms.begin(), focus_atoms.end());
 
@@ -327,12 +327,12 @@ std::vector<std::string> embodied_reasoning_engine::infer_consequences(const std
     // Query for causal relations involving this action
     auto causal_atoms = atomspace_->query(action);
 
-    for (auto atom : causal_atoms) {
-        if (atom->is_link() && atom->get_type() == atom_type::IMPLICATION_LINK) {
+    for (auto a : causal_atoms) {
+        if (a->is_link() && a->get_type() == atom_type::IMPLICATION_LINK) {
             // Extract consequence from implication link
-            auto link = std::static_pointer_cast<Link>(atom);
-            if (link->get_arity() >= 2) {
-                auto effect = link->get_outgoing()[1];
+            auto lk = std::static_pointer_cast<link>(a);
+            if (lk->get_arity() >= 2) {
+                auto effect = lk->get_outgoing()[1];
                 consequences.push_back(effect->to_string());
             }
         }
@@ -353,18 +353,18 @@ std::string embodied_reasoning_engine::get_current_context() const {
     return current_context_;
 }
 
-std::vector<std::string> embodied_reasoning_engine::plan_actions(const std::string& goal) const {
+std::vector<std::string> embodied_reasoning_engine::plan_actions(const std::string& goal_desc) const {
     std::vector<std::string> plan;
 
     // Simple planning based on goal decomposition
     // In a full implementation, this would use more sophisticated planning algorithms
 
-    if (goal.find("move") != std::string::npos) {
+    if (goal_desc.find("move") != std::string::npos) {
         plan.push_back("check_current_location");
         plan.push_back("plan_path");
         plan.push_back("execute_movement");
         plan.push_back("verify_arrival");
-    } else if (goal.find("learn") != std::string::npos) {
+    } else if (goal_desc.find("learn") != std::string::npos) {
         plan.push_back("identify_knowledge_gap");
         plan.push_back("search_for_information");
         plan.push_back("integrate_new_knowledge");
@@ -386,36 +386,36 @@ bool embodied_reasoning_engine::validate_action_feasibility(const std::string& a
 }
 
 // Private methods
-std::shared_ptr<Atom> embodied_reasoning_engine::create_spatial_atom(const std::string& object, const std::string& location) {
+std::shared_ptr<atom> embodied_reasoning_engine::create_spatial_atom(const std::string& object, const std::string& location) {
     auto object_node = atomspace_->add_node(atom_type::CONCEPT_NODE, object);
     auto location_node = atomspace_->add_node(atom_type::CONCEPT_NODE, location);
     auto at_predicate = atomspace_->add_node(atom_type::PREDICATE_NODE, "at");
 
     // Create (EvaluationLink (PredicateNode "at") (ListLink object location))
-    std::vector<std::shared_ptr<Atom>> args = {object_node, location_node};
+    std::vector<std::shared_ptr<atom>> args = {object_node, location_node};
     auto list_link = atomspace_->add_link(atom_type::INHERITANCE_LINK, args);  // Simplified
 
-    std::vector<std::shared_ptr<Atom>> eval_args = {at_predicate, list_link};
+    std::vector<std::shared_ptr<atom>> eval_args = {at_predicate, list_link};
     return atomspace_->add_link(atom_type::EVALUATION_LINK, eval_args);
 }
 
-std::shared_ptr<Atom> embodied_reasoning_engine::create_temporal_atom(const std::string& event, const std::string& time) {
+std::shared_ptr<atom> embodied_reasoning_engine::create_temporal_atom(const std::string& event, const std::string& time) {
     auto event_node = atomspace_->add_node(atom_type::CONCEPT_NODE, event);
     auto time_node = atomspace_->add_node(atom_type::CONCEPT_NODE, time);
     auto during_predicate = atomspace_->add_node(atom_type::PREDICATE_NODE, "during");
 
-    std::vector<std::shared_ptr<Atom>> args = {event_node, time_node};
+    std::vector<std::shared_ptr<atom>> args = {event_node, time_node};
     auto list_link = atomspace_->add_link(atom_type::INHERITANCE_LINK, args);
 
-    std::vector<std::shared_ptr<Atom>> eval_args = {during_predicate, list_link};
+    std::vector<std::shared_ptr<atom>> eval_args = {during_predicate, list_link};
     return atomspace_->add_link(atom_type::EVALUATION_LINK, eval_args);
 }
 
-std::shared_ptr<Atom> embodied_reasoning_engine::create_causal_atom(const std::string& cause, const std::string& effect) {
+std::shared_ptr<atom> embodied_reasoning_engine::create_causal_atom(const std::string& cause, const std::string& effect) {
     auto cause_node = atomspace_->add_node(atom_type::CONCEPT_NODE, cause);
     auto effect_node = atomspace_->add_node(atom_type::CONCEPT_NODE, effect);
 
-    std::vector<std::shared_ptr<Atom>> args = {cause_node, effect_node};
+    std::vector<std::shared_ptr<atom>> args = {cause_node, effect_node};
     return atomspace_->add_link(atom_type::IMPLICATION_LINK, args);
 }
 

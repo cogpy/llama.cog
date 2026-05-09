@@ -17,17 +17,17 @@ class goal_manager;
 class perception_processor;
 
 // Goal representation for cognitive processing
-struct goal_t {
+struct goal {
     std::string description;
     double priority;
     std::chrono::steady_clock::time_point created;
-    std::shared_ptr<Atom> goal_atom;
+    std::shared_ptr<atom> goal_atom;
     bool completed;
 
-    goal_t(const std::string& desc, double prio = 0.5)
+    goal(const std::string& desc, double prio = 0.5)
         : description(desc), priority(prio), created(std::chrono::steady_clock::now()), completed(false) {}
 
-    bool operator<(const goal_t& other) const {
+    bool operator<(const goal& other) const {
         return priority < other.priority; // Max heap based on priority
     }
 };
@@ -35,8 +35,8 @@ struct goal_t {
 // Cognitive state tracking
 struct cognitive_state {
     std::shared_ptr<atom_space> atomspace;
-    std::priority_queue<goal_t> active_goals;
-    std::vector<std::shared_ptr<Atom>> current_focus;
+    std::priority_queue<goal> active_goals;
+    std::vector<std::shared_ptr<atom>> current_focus;
     std::string current_context;
     size_t cycle_count;
     std::chrono::steady_clock::time_point last_cycle;
@@ -80,9 +80,9 @@ public:
     void stop();
 
     // Goal management
-    void add_goal(const goal_t& goal);
+    void add_goal(const goal& g);
     void remove_goal(const std::string& description);
-    std::vector<goal_t> get_active_goals() const;
+    std::vector<goal> get_active_goals() const;
 
     // Architecture awareness
     void set_architecture_config(const architecture_config& config);
@@ -131,7 +131,7 @@ private:
     // Internal utilities
     void update_attentional_focus();
     void process_goal_completion();
-    std::vector<std::shared_ptr<Atom>> select_relevant_knowledge(const std::string& context) const;
+    std::vector<std::shared_ptr<atom>> select_relevant_knowledge(const std::string& context) const;
 };
 
 // Embodied reasoning capabilities
@@ -153,7 +153,7 @@ public:
     std::string get_current_context() const;
 
     // Embodied action planning
-    std::vector<std::string> plan_actions(const std::string& goal) const;
+    std::vector<std::string> plan_actions(const std::string& goal_desc) const;
     bool validate_action_feasibility(const std::string& action, const std::string& context) const;
 
 private:
@@ -161,9 +161,9 @@ private:
     std::string current_context_;
 
     // Internal reasoning methods
-    std::shared_ptr<Atom> create_spatial_atom(const std::string& object, const std::string& location);
-    std::shared_ptr<Atom> create_temporal_atom(const std::string& event, const std::string& time);
-    std::shared_ptr<Atom> create_causal_atom(const std::string& cause, const std::string& effect);
+    std::shared_ptr<atom> create_spatial_atom(const std::string& object, const std::string& location);
+    std::shared_ptr<atom> create_temporal_atom(const std::string& event, const std::string& time);
+    std::shared_ptr<atom> create_causal_atom(const std::string& cause, const std::string& effect);
 };
 
 } // namespace opencog

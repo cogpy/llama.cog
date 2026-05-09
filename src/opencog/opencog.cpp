@@ -118,10 +118,10 @@ void cognitive_system::add_knowledge(const std::string& concept_name, const std:
         auto target_node = atomspace_->add_node(atom_type::CONCEPT_NODE, target);
         auto relation_node = atomspace_->add_node(atom_type::PREDICATE_NODE, relation);
 
-        std::vector<std::shared_ptr<Atom>> args = {concept_node, target_node};
+        std::vector<std::shared_ptr<atom>> args = {concept_node, target_node};
         auto list_link = atomspace_->add_link(atom_type::INHERITANCE_LINK, args);
 
-        std::vector<std::shared_ptr<Atom>> eval_args = {relation_node, list_link};
+        std::vector<std::shared_ptr<atom>> eval_args = {relation_node, list_link};
         auto evaluation = atomspace_->add_link(atom_type::EVALUATION_LINK, eval_args);
         evaluation->set_truth_value(truth_value(0.8, 0.7));
     }
@@ -132,8 +132,8 @@ void cognitive_system::set_goal(const std::string& goal_description, double prio
         return;
     }
 
-    goal_t goal(goal_description, priority);
-    cognitive_cycle_->add_goal(goal);
+    goal g(goal_description, priority);
+    cognitive_cycle_->add_goal(g);
 }
 
 void cognitive_system::configure_architecture(const architecture_config& config) {
@@ -169,12 +169,12 @@ void cognitive_system::add_causal_knowledge(const std::string& cause, const std:
     reasoning_engine_->add_causal_relation(cause, effect, confidence);
 }
 
-std::vector<std::string> cognitive_system::plan_actions(const std::string& goal) const {
+std::vector<std::string> cognitive_system::plan_actions(const std::string& goal_desc) const {
     if (!initialized_) {
         return {};
     }
 
-    return reasoning_engine_->plan_actions(goal);
+    return reasoning_engine_->plan_actions(goal_desc);
 }
 
 cognitive_system::system_metrics cognitive_system::get_metrics() const {
@@ -359,8 +359,8 @@ architecture_config create_optimal_config() {
     return config;
 }
 
-std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& text, atom_space& atomspace) {
-    std::vector<std::shared_ptr<Atom>> atoms;
+std::vector<std::shared_ptr<atom>> parse_knowledge_from_text(const std::string& text, atom_space& atomspace) {
+    std::vector<std::shared_ptr<atom>> atoms;
 
     // Simple knowledge extraction - look for concepts in text
     std::stringstream ss(text);
@@ -372,21 +372,21 @@ std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& 
                                  [](char c) { return !std::isalnum(static_cast<unsigned char>(c)); }), word.end());
 
         if (word.length() > 3) {  // Only consider meaningful words
-            auto atom = atomspace.add_node(atom_type::CONCEPT_NODE, word);
-            atoms.push_back(atom);
+            auto a = atomspace.add_node(atom_type::CONCEPT_NODE, word);
+            atoms.push_back(a);
         }
     }
 
     return atoms;
 }
 
-std::string atoms_to_readable_text(const std::vector<std::shared_ptr<Atom>>& atoms) {
+std::string atoms_to_readable_text(const std::vector<std::shared_ptr<atom>>& atoms) {
     std::stringstream readable;
 
     for (size_t i = 0; i < atoms.size(); ++i) {
         if (atoms[i]->is_node()) {
-            auto node = std::static_pointer_cast<Node>(atoms[i]);
-            readable << node->get_name();
+            auto n = std::static_pointer_cast<node>(atoms[i]);
+            readable << n->get_name();
             if (i < atoms.size() - 1) {
                 readable << ", ";
             }

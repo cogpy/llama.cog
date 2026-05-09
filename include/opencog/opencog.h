@@ -31,7 +31,7 @@
  *
  *   // Add knowledge and goals
  *   auto concept = atomspace->add_node(opencog::atom_type::CONCEPT_NODE, "AI_system");
- *   cognitive_cycle->add_goal(opencog::goal_t("Understand user query", 0.8));
+ *   cognitive_cycle->add_goal(opencog::goal("Understand user query", 0.8));
  *
  *   // Process input and generate response
  *   cognitive_cycle->process_input("What is artificial intelligence?");
@@ -73,7 +73,7 @@ public:
     // Embodied reasoning
     void add_spatial_knowledge(const std::string& object, const std::string& location);
     void add_causal_knowledge(const std::string& cause, const std::string& effect, double confidence = 0.8);
-    std::vector<std::string> plan_actions(const std::string& goal) const;
+    std::vector<std::string> plan_actions(const std::string& goal_desc) const;
 
     // System monitoring
     struct system_metrics {
@@ -125,8 +125,8 @@ namespace utils {
     architecture_config create_optimal_config();
 
     // Knowledge utilities
-    std::vector<std::shared_ptr<Atom>> parse_knowledge_from_text(const std::string& text, atom_space& atomspace);
-    std::string atoms_to_readable_text(const std::vector<std::shared_ptr<Atom>>& atoms);
+    std::vector<std::shared_ptr<atom>> parse_knowledge_from_text(const std::string& text, atom_space& atomspace);
+    std::string atoms_to_readable_text(const std::vector<std::shared_ptr<atom>>& atoms);
 
     // Performance utilities
     void benchmark_inference_performance(llm_inference_engine& engine, const std::string& test_prompt);

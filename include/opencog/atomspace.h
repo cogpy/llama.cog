@@ -11,11 +11,11 @@
 namespace opencog {
 
 // Forward declarations
-class Atom;
-class Node;
-class Link;
+class atom;
+class node;
+class link;
 
-// Atom types enumeration
+// atom types enumeration
 enum class atom_type {
     CONCEPT_NODE = 1,
     PREDICATE_NODE = 2,
@@ -48,10 +48,10 @@ struct attention_value {
     attention_value(double i = 0.1, double u = 0.0) : importance(i), urgency(u) {}
 };
 
-// Base Atom class - fundamental unit of knowledge
-class Atom {
+// Base atom class - fundamental unit of knowledge
+class atom {
 public:
-    virtual ~Atom() = default;
+    virtual ~atom() = default;
 
     uint64_t get_handle() const { return handle_; }
     atom_type get_type() const { return type_; }
@@ -66,7 +66,7 @@ public:
     virtual bool is_link() const = 0;
 
 protected:
-    Atom(atom_type type, uint64_t handle)
+    atom(atom_type type, uint64_t handle)
         : type_(type), handle_(handle) {}
 
     atom_type type_;
@@ -75,11 +75,11 @@ protected:
     attention_value attention_value_;
 };
 
-// Node class - atomic concepts/predicates
-class Node : public Atom {
+// node class - atomic concepts/predicates
+class node : public atom {
 public:
-    Node(atom_type type, const std::string& name, uint64_t handle)
-        : Atom(type, handle), name_(name) {}
+    node(atom_type type, const std::string& name, uint64_t handle)
+        : atom(type, handle), name_(name) {}
 
     const std::string& get_name() const { return name_; }
 
@@ -94,13 +94,13 @@ private:
     std::string name_;
 };
 
-// Link class - relationships between atoms
-class Link : public Atom {
+// link class - relationships between atoms
+class link : public atom {
 public:
-    Link(atom_type type, const std::vector<std::shared_ptr<Atom>>& outgoing, uint64_t handle)
-        : Atom(type, handle), outgoing_(outgoing) {}
+    link(atom_type type, const std::vector<std::shared_ptr<atom>>& outgoing, uint64_t handle)
+        : atom(type, handle), outgoing_(outgoing) {}
 
-    const std::vector<std::shared_ptr<Atom>>& get_outgoing() const { return outgoing_; }
+    const std::vector<std::shared_ptr<atom>>& get_outgoing() const { return outgoing_; }
     size_t get_arity() const { return outgoing_.size(); }
 
     std::string to_string() const override;
@@ -109,7 +109,7 @@ public:
     bool is_link() const override { return true; }
 
 private:
-    std::vector<std::shared_ptr<Atom>> outgoing_;
+    std::vector<std::shared_ptr<atom>> outgoing_;
 };
 
 // atom_space - knowledge base and reasoning engine
@@ -118,19 +118,19 @@ public:
     atom_space();
     ~atom_space() = default;
 
-    // Atom creation and retrieval
-    std::shared_ptr<Node> add_node(atom_type type, const std::string& name);
-    std::shared_ptr<Link> add_link(atom_type type, const std::vector<std::shared_ptr<Atom>>& outgoing);
+    // atom creation and retrieval
+    std::shared_ptr<node> add_node(atom_type type, const std::string& name);
+    std::shared_ptr<link> add_link(atom_type type, const std::vector<std::shared_ptr<atom>>& outgoing);
 
-    std::shared_ptr<Atom> get_atom(uint64_t handle) const;
-    std::vector<std::shared_ptr<Atom>> get_atoms_by_type(atom_type type) const;
-    std::vector<std::shared_ptr<Atom>> get_atoms_by_name(const std::string& name) const;
+    std::shared_ptr<atom> get_atom(uint64_t handle) const;
+    std::vector<std::shared_ptr<atom>> get_atoms_by_type(atom_type type) const;
+    std::vector<std::shared_ptr<atom>> get_atoms_by_name(const std::string& name) const;
 
     // Query and pattern matching
-    std::vector<std::shared_ptr<Atom>> query(const std::string& pattern) const;
+    std::vector<std::shared_ptr<atom>> query(const std::string& pattern) const;
 
     // Attention and memory management
-    std::vector<std::shared_ptr<Atom>> get_attentional_focus(size_t max_atoms = 100) const;
+    std::vector<std::shared_ptr<atom>> get_attentional_focus(size_t max_atoms = 100) const;
     void update_attention_values();
     void decay_attention();
 
@@ -145,14 +145,14 @@ public:
 
 private:
     mutable std::mutex mutex_;
-    std::unordered_map<uint64_t, std::shared_ptr<Atom>> atoms_;
+    std::unordered_map<uint64_t, std::shared_ptr<atom>> atoms_;
     std::unordered_map<std::string, std::vector<uint64_t>> name_index_;
     std::unordered_map<atom_type, std::vector<uint64_t>> type_index_;
     uint64_t next_handle_;
 
     uint64_t generate_handle();
-    void add_to_indices(std::shared_ptr<Atom> atom);
-    void remove_from_indices(std::shared_ptr<Atom> atom);
+    void add_to_indices(std::shared_ptr<atom> a);
+    void remove_from_indices(std::shared_ptr<atom> a);
 };
 
 } // namespace opencog

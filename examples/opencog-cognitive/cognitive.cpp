@@ -89,8 +89,8 @@ static void show_knowledge_base(const opencog::cognitive_system& system) {
     auto focus_atoms = atomspace->get_attentional_focus(10);
     if (!focus_atoms.empty()) {
         std::cout << "\nHigh attention atoms:\n";
-        for (const auto& atom : focus_atoms) {
-            std::cout << "- " << atom->to_string() << "\n";
+        for (const auto& a : focus_atoms) {
+            std::cout << "- " << a->to_string() << "\n";
         }
     }
     std::cout << "\n";
@@ -216,13 +216,13 @@ int main(int argc, char ** argv) {
             std::cout << "Added causal relation: " << tokens[1] << " -> " << tokens[2] << "\n";
         }
         else if (command == "plan" && tokens.size() >= 2) {
-            std::string goal;
+            std::string goal_desc;
             for (size_t i = 1; i < tokens.size(); ++i) {
-                goal += tokens[i];
-                if (i < tokens.size() - 1) goal += " ";
+                goal_desc += tokens[i];
+                if (i < tokens.size() - 1) goal_desc += " ";
             }
-            auto actions = cognitive_system.plan_actions(goal);
-            std::cout << "Action plan for '" << goal << "':\n";
+            auto actions = cognitive_system.plan_actions(goal_desc);
+            std::cout << "Action plan for '" << goal_desc << "':\n";
             for (size_t i = 0; i < actions.size(); ++i) {
                 std::cout << (i + 1) << ". " << actions[i] << "\n";
             }

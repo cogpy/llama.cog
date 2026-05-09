@@ -123,7 +123,7 @@ bool llm_inference_engine::is_model_loaded() const {
 }
 
 std::string llm_inference_engine::generate_response(const std::string& prompt,
-                                                const std::vector<std::shared_ptr<Atom>>& context_atoms,
+                                                const std::vector<std::shared_ptr<atom>>& context_atoms,
                                                 size_t max_tokens) {
     if (!model_loaded_) {
         return "Error: No model loaded";
@@ -144,8 +144,12 @@ std::string llm_inference_engine::generate_response(const std::string& prompt,
     int n_tokens = llama_tokenize(vocab, enhanced_prompt.c_str(), enhanced_prompt.length(),
                                   tokens.data(), tokens.size(), true, false);
 
-    if (n_tokens < 0) {
-        return "Error: Failed to tokenize prompt";
+    if (n_tokens <= 0) {
+        // n_tokens < 0  -> tokenize failed (insufficient buffer or other error).
+        // n_tokens == 0 -> empty tokenization; passes the < 0 check but would
+        //                  cause batch.logits[-1] OOB at the line below.
+        return n_tokens < 0 ? "Error: Failed to tokenize prompt"
+                            : "Error: Empty tokenization result";
     }
 
     tokens.resize(n_tokens);
@@ -231,8 +235,8 @@ std::string llm_inference_engine::cognitive_inference(const std::string& input,
     // Add context from atomspace
     if (!state.current_focus.empty()) {
         cognitive_prompt << "Current knowledge context:\n";
-        for (const auto& atom : state.current_focus) {
-            cognitive_prompt << "- " << atom->to_string() << "\n";
+        for (const auto& a : state.current_focus) {
+            cognitive_prompt << "- " << a->to_string() << "\n";
         }
         cognitive_prompt << "\n";
     }
@@ -243,7 +247,7 @@ std::string llm_inference_engine::cognitive_inference(const std::string& input,
         auto temp_goals = state.active_goals;
         int goal_count = 0;
         while (!temp_goals.empty() && goal_count < 3) {
-            goal_t g = temp_goals.top();
+            goal g = temp_goals.top();
             temp_goals.pop();
             cognitive_prompt << "- " << g.description << " (priority: " << g.priority << ")\n";
             goal_count++;
@@ -261,13 +265,13 @@ std::string llm_inference_engine::cognitive_inference(const std::string& input,
 }
 
 std::string llm_inference_engine::reason_and_generate(const std::string& query,
-                                                  const std::vector<std::shared_ptr<Atom>>& knowledge_base) {
+                                                  const std::vector<std::shared_ptr<atom>>& knowledge_base) {
     std::stringstream reasoning_prompt;
     reasoning_prompt << "Given the following knowledge, reason step by step to answer the query.\n\n";
 
     reasoning_prompt << "Knowledge:\n";
-    for (const auto& atom : knowledge_base) {
-        reasoning_prompt << "- " << atom->to_string() << "\n";
+    for (const auto& a : knowledge_base) {
+        reasoning_prompt << "- " << a->to_string() << "\n";
     }
 
     reasoning_prompt << "\nQuery: " << query << "\n\n";
@@ -332,7 +336,7 @@ double llm_inference_engine::compute_semantic_similarity(const std::string& text
     return dot_product / (std::sqrt(norm1) * std::sqrt(norm2));
 }
 
-void llm_inference_engine::update_context(const std::vector<std::shared_ptr<Atom>>& atoms) {
+void llm_inference_engine::update_context(const std::vector<std::shared_ptr<atom>>& atoms) {
     // This would update the LLM context with relevant atoms
     // For now, we'll just store them for use in the next generation
     (void)atoms;
@@ -385,17 +389,17 @@ void llm_inference_engine::set_architecture_optimization(const architecture_conf
 }
 
 // Private methods
-std::string llm_inference_engine::atoms_to_context_string(const std::vector<std::shared_ptr<Atom>>& atoms) const {
+std::string llm_inference_engine::atoms_to_context_string(const std::vector<std::shared_ptr<atom>>& atoms) const {
     std::stringstream ss;
     ss << "Knowledge context:\n";
-    for (const auto& atom : atoms) {
-        ss << "- " << atom->to_string() << "\n";
+    for (const auto& a : atoms) {
+        ss << "- " << a->to_string() << "\n";
     }
     return ss.str();
 }
 
 std::string llm_inference_engine::format_prompt_with_reasoning(const std::string& prompt,
-                                                           const std::vector<std::shared_ptr<Atom>>& reasoning_atoms) const {
+                                                           const std::vector<std::shared_ptr<atom>>& reasoning_atoms) const {
     std::stringstream formatted;
     formatted << atoms_to_context_string(reasoning_atoms);
     formatted << "\nPrompt: " << prompt << "\n\nResponse:";
@@ -440,7 +444,7 @@ cognitive_prompt_engine::cognitive_prompt_engine(std::shared_ptr<atom_space> ato
 }
 
 std::string cognitive_prompt_engine::enhance_prompt(const std::string& base_prompt,
-                                                const std::vector<std::shared_ptr<Atom>>& relevant_atoms,
+                                                const std::vector<std::shared_ptr<atom>>& relevant_atoms,
                                                 const std::string& reasoning_context) const {
     std::stringstream enhanced;
 
@@ -460,13 +464,13 @@ std::string cognitive_prompt_engine::enhance_prompt(const std::string& base_prom
     return enhanced.str();
 }
 
-std::string cognitive_prompt_engine::create_goal_prompt(const goal_t& goal,
-                                                    const std::vector<std::shared_ptr<Atom>>& knowledge) const {
+std::string cognitive_prompt_engine::create_goal_prompt(const goal& g,
+                                                    const std::vector<std::shared_ptr<atom>>& knowledge) const {
     std::stringstream goal_prompt;
 
     goal_prompt << "You are working toward the following goal:\n";
-    goal_prompt << "Goal: " << goal.description << "\n";
-    goal_prompt << "Priority: " << goal.priority << "\n\n";
+    goal_prompt << "Goal: " << g.description << "\n";
+    goal_prompt << "Priority: " << g.priority << "\n\n";
 
     if (!knowledge.empty()) {
         goal_prompt << "Available knowledge:\n";
@@ -479,7 +483,7 @@ std::string cognitive_prompt_engine::create_goal_prompt(const goal_t& goal,
 }
 
 std::string cognitive_prompt_engine::create_reasoning_chain(const std::string& problem,
-                                                        const std::vector<std::shared_ptr<Atom>>& facts) const {
+                                                        const std::vector<std::shared_ptr<atom>>& facts) const {
     std::stringstream chain_prompt;
 
     chain_prompt << create_reasoning_template() << "\n\n";
@@ -497,7 +501,7 @@ std::string cognitive_prompt_engine::create_reasoning_chain(const std::string& p
 
 std::string cognitive_prompt_engine::create_embodied_prompt(const std::string& action,
                                                         const std::string& environment_context,
-                                                        const std::vector<std::shared_ptr<Atom>>& spatial_knowledge) const {
+                                                        const std::vector<std::shared_ptr<atom>>& spatial_knowledge) const {
     std::stringstream embodied_prompt;
 
     embodied_prompt << create_embodied_template() << "\n\n";
@@ -514,10 +518,10 @@ std::string cognitive_prompt_engine::create_embodied_prompt(const std::string& a
     return embodied_prompt.str();
 }
 
-std::string cognitive_prompt_engine::format_atoms_as_knowledge(const std::vector<std::shared_ptr<Atom>>& atoms) const {
+std::string cognitive_prompt_engine::format_atoms_as_knowledge(const std::vector<std::shared_ptr<atom>>& atoms) const {
     std::stringstream knowledge;
-    for (const auto& atom : atoms) {
-        knowledge << "- " << atom->to_string() << "\n";
+    for (const auto& a : atoms) {
+        knowledge << "- " << a->to_string() << "\n";
     }
     return knowledge.str();
 }
@@ -549,13 +553,13 @@ void cognitive_llm_memory::encode_reasoning_step(const std::string& premise, con
     reasoning_atom->set_attention_value(attention_value(0.8, 0.6));
 }
 
-std::vector<std::shared_ptr<Atom>> cognitive_llm_memory::retrieve_relevant_memories(const std::string& query,
+std::vector<std::shared_ptr<atom>> cognitive_llm_memory::retrieve_relevant_memories(const std::string& query,
                                                                                 size_t max_memories) const {
     auto all_memories = atomspace_->query(query);
 
     // Sort by relevance score
     std::sort(all_memories.begin(), all_memories.end(),
-              [this, &query](const std::shared_ptr<Atom>& a, const std::shared_ptr<Atom>& b) {
+              [this, &query](const std::shared_ptr<atom>& a, const std::shared_ptr<atom>& b) {
                   return compute_relevance_score(a, query) > compute_relevance_score(b, query);
               });
 
@@ -585,10 +589,10 @@ void cognitive_llm_memory::learn_from_feedback(const std::string& interaction, b
 void cognitive_llm_memory::update_concept_strengths(const std::vector<std::string>& concepts, double delta) {
     for (const std::string& concept_name : concepts) {
         auto concept_atoms = atomspace_->get_atoms_by_name(concept_name);
-        for (auto atom : concept_atoms) {
-            truth_value tv = atom->get_truth_value();
+        for (auto a : concept_atoms) {
+            truth_value tv = a->get_truth_value();
             tv.strength = std::max(0.0, std::min(1.0, tv.strength + delta));
-            atom->set_truth_value(tv);
+            a->set_truth_value(tv);
         }
     }
 }
@@ -598,10 +602,10 @@ void cognitive_llm_memory::consolidate_memories() {
     auto all_atoms = atomspace_->get_attentional_focus(1000);
 
     // Simple consolidation - boost attention of frequently accessed concepts
-    for (auto atom : all_atoms) {
-        attention_value av = atom->get_attention_value();
+    for (auto a : all_atoms) {
+        attention_value av = a->get_attention_value();
         av.importance *= 1.01;  // Small boost for active memories
-        atom->set_attention_value(av);
+        a->set_attention_value(av);
     }
 }
 
@@ -613,27 +617,27 @@ void cognitive_llm_memory::decay_old_memories(double decay_rate) {
     atomspace_->decay_attention();
 }
 
-std::shared_ptr<Atom> cognitive_llm_memory::create_interaction_atom(const std::string& input, const std::string& output) {
+std::shared_ptr<atom> cognitive_llm_memory::create_interaction_atom(const std::string& input, const std::string& output) {
     auto input_node = atomspace_->add_node(atom_type::CONCEPT_NODE, "input:" + input);
     auto output_node = atomspace_->add_node(atom_type::CONCEPT_NODE, "output:" + output);
     auto interaction_predicate = atomspace_->add_node(atom_type::PREDICATE_NODE, "interaction");
 
-    std::vector<std::shared_ptr<Atom>> args = {input_node, output_node};
+    std::vector<std::shared_ptr<atom>> args = {input_node, output_node};
     auto list_link = atomspace_->add_link(atom_type::INHERITANCE_LINK, args);
 
-    std::vector<std::shared_ptr<Atom>> eval_args = {interaction_predicate, list_link};
+    std::vector<std::shared_ptr<atom>> eval_args = {interaction_predicate, list_link};
     return atomspace_->add_link(atom_type::EVALUATION_LINK, eval_args);
 }
 
-std::shared_ptr<Atom> cognitive_llm_memory::create_reasoning_atom(const std::string& premise, const std::string& conclusion) {
+std::shared_ptr<atom> cognitive_llm_memory::create_reasoning_atom(const std::string& premise, const std::string& conclusion) {
     auto premise_node = atomspace_->add_node(atom_type::CONCEPT_NODE, premise);
     auto conclusion_node = atomspace_->add_node(atom_type::CONCEPT_NODE, conclusion);
 
-    std::vector<std::shared_ptr<Atom>> args = {premise_node, conclusion_node};
+    std::vector<std::shared_ptr<atom>> args = {premise_node, conclusion_node};
     return atomspace_->add_link(atom_type::IMPLICATION_LINK, args);
 }
 
-double cognitive_llm_memory::compute_relevance_score(std::shared_ptr<Atom> memory, const std::string& query) const {
+double cognitive_llm_memory::compute_relevance_score(std::shared_ptr<atom> memory, const std::string& query) const {
     // Simple relevance scoring based on string similarity and attention
     std::string memory_str = memory->to_string();
 

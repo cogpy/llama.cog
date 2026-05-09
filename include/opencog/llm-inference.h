@@ -24,7 +24,7 @@ public:
 
     // Core inference with cognitive enhancement
     std::string generate_response(const std::string& prompt,
-                                const std::vector<std::shared_ptr<Atom>>& context_atoms = {},
+                                const std::vector<std::shared_ptr<atom>>& context_atoms = {},
                                 size_t max_tokens = 256);
 
     // Architecture-aware inference
@@ -34,14 +34,14 @@ public:
 
     // Reasoning-enhanced generation
     std::string reason_and_generate(const std::string& query,
-                                  const std::vector<std::shared_ptr<Atom>>& knowledge_base);
+                                  const std::vector<std::shared_ptr<atom>>& knowledge_base);
 
     // Embeddings for semantic similarity
     std::vector<float> get_embeddings(const std::string& text);
     double compute_semantic_similarity(const std::string& text1, const std::string& text2);
 
     // Context management
-    void update_context(const std::vector<std::shared_ptr<Atom>>& atoms);
+    void update_context(const std::vector<std::shared_ptr<atom>>& atoms);
     void clear_context();
 
     // Performance monitoring
@@ -75,9 +75,9 @@ private:
     architecture_config current_config_;
 
     // Cognitive enhancement methods
-    std::string atoms_to_context_string(const std::vector<std::shared_ptr<Atom>>& atoms) const;
+    std::string atoms_to_context_string(const std::vector<std::shared_ptr<atom>>& atoms) const;
     std::string format_prompt_with_reasoning(const std::string& prompt,
-                                           const std::vector<std::shared_ptr<Atom>>& reasoning_atoms) const;
+                                           const std::vector<std::shared_ptr<atom>>& reasoning_atoms) const;
 
     // Architecture optimization
     void optimize_for_cpu();
@@ -98,26 +98,26 @@ public:
 
     // Prompt enhancement with cognitive context
     std::string enhance_prompt(const std::string& base_prompt,
-                             const std::vector<std::shared_ptr<Atom>>& relevant_atoms,
+                             const std::vector<std::shared_ptr<atom>>& relevant_atoms,
                              const std::string& reasoning_context = "") const;
 
     // Goal-directed prompting
-    std::string create_goal_prompt(const goal_t& goal,
-                                 const std::vector<std::shared_ptr<Atom>>& knowledge) const;
+    std::string create_goal_prompt(const goal& g,
+                                 const std::vector<std::shared_ptr<atom>>& knowledge) const;
 
     // Chain-of-thought reasoning prompts
     std::string create_reasoning_chain(const std::string& problem,
-                                     const std::vector<std::shared_ptr<Atom>>& facts) const;
+                                     const std::vector<std::shared_ptr<atom>>& facts) const;
 
     // Embodied reasoning prompts
     std::string create_embodied_prompt(const std::string& action,
                                      const std::string& environment_context,
-                                     const std::vector<std::shared_ptr<Atom>>& spatial_knowledge) const;
+                                     const std::vector<std::shared_ptr<atom>>& spatial_knowledge) const;
 
 private:
     std::shared_ptr<atom_space> atomspace_;
 
-    std::string format_atoms_as_knowledge(const std::vector<std::shared_ptr<Atom>>& atoms) const;
+    std::string format_atoms_as_knowledge(const std::vector<std::shared_ptr<atom>>& atoms) const;
     std::string create_reasoning_template() const;
     std::string create_embodied_template() const;
 };
@@ -132,7 +132,7 @@ public:
     void encode_interaction(const std::string& input, const std::string& output);
     void encode_reasoning_step(const std::string& premise, const std::string& conclusion);
 
-    std::vector<std::shared_ptr<Atom>> retrieve_relevant_memories(const std::string& query,
+    std::vector<std::shared_ptr<atom>> retrieve_relevant_memories(const std::string& query,
                                                                 size_t max_memories = 10) const;
 
     // Learning from interactions
@@ -146,9 +146,9 @@ public:
 private:
     std::shared_ptr<atom_space> atomspace_;
 
-    std::shared_ptr<Atom> create_interaction_atom(const std::string& input, const std::string& output);
-    std::shared_ptr<Atom> create_reasoning_atom(const std::string& premise, const std::string& conclusion);
-    double compute_relevance_score(std::shared_ptr<Atom> memory, const std::string& query) const;
+    std::shared_ptr<atom> create_interaction_atom(const std::string& input, const std::string& output);
+    std::shared_ptr<atom> create_reasoning_atom(const std::string& premise, const std::string& conclusion);
+    double compute_relevance_score(std::shared_ptr<atom> memory, const std::string& query) const;
 };
 
 } // namespace opencog
