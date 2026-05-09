@@ -66,7 +66,9 @@ bool llm_inference_engine::load_model(const std::string& model_path, const archi
     // Set up context parameters
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = std::min(config.max_context_length, static_cast<size_t>(4096));
-    ctx_params.n_threads = std::thread::hardware_concurrency();
+    // hardware_concurrency() is allowed to return 0 when not computable;
+    // fall back to 1 so we don't overwrite GGML_DEFAULT_N_THREADS with 0.
+    ctx_params.n_threads = std::max(1u, std::thread::hardware_concurrency());
     ctx_params.n_threads_batch = ctx_params.n_threads;
 
     // Create context
