@@ -11,7 +11,7 @@ namespace opencog {
 
 // llm_inference_engine implementation
 llm_inference_engine::llm_inference_engine()
-    : model_(nullptr), context_(nullptr), sampler_(nullptr), model_loaded_(false) {
+    : model_(nullptr), context_(nullptr), sampler_(nullptr), model_loaded_(false), last_metrics_{} {
 }
 
 llm_inference_engine::~llm_inference_engine() {
