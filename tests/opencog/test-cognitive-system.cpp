@@ -31,8 +31,8 @@ int main() {
         require_true(metrics.active_goals_count == 0, "uninitialized metrics should be zeroed");
         require_true(metrics.cycle_count == 0, "uninitialized metrics should be zeroed");
 
-        opencog::atom_space atomspace;
-        auto atoms = opencog::utils::parse_knowledge_from_text("Robots learn quickly in labs", atomspace);
+        opencog::atom_space parser_atomspace;
+        auto atoms = opencog::utils::parse_knowledge_from_text("Robots learn quickly in labs", parser_atomspace);
         require_true(!atoms.empty(), "knowledge parsing should extract concept atoms");
         auto readable = opencog::utils::atoms_to_readable_text(atoms);
         require_true(!readable.empty(), "readable text conversion should return content");
