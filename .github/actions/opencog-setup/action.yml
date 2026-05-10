@@ -77,4 +77,9 @@ runs:
         cmake --build build \
           --config ${{ inputs.build-type }} \
           --target opencog llama-cognitive \
+            test-atomspace \
+            test-cognitive-cycle \
+            test-embodied-reasoning \
+            test-prompt-engine \
+            test-cognitive-system \
           -j $(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)

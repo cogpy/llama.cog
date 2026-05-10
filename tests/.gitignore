@@ -1,5 +1,8 @@
 *
 !*.*
+!opencog/
+!opencog/CMakeLists.txt
+!opencog/*.cpp
 *.o
 ggml-common.h
 **/*.swp
