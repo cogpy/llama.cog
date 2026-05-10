@@ -15,6 +15,10 @@ function(llama_add_compile_flags)
             # requiring per-line casts in every upstream file.
             add_compile_options(
                 /wd4005  # Macro redefinition
+                /wd4065  # 'switch' contains 'default' but no 'case' labels
+                /wd4101  # Unreferenced local variable (common in 'catch' clauses)
+                /wd4127  # Conditional expression is constant
+                /wd4189  # Local variable initialised but not referenced
                 /wd4244  # Conversion, possible loss of data
                 /wd4267  # 'size_t' to a smaller type, possible loss of data
                 /wd4305  # 'type1' to 'type2', possible loss of data
