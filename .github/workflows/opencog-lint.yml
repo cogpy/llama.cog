@@ -115,13 +115,13 @@ jobs:
             exit 0
           fi
 
-          CHECKS="bugprone-*,clang-analyzer-*,concurrency-*,"\
-"cppcoreguidelines-*,modernize-*,readability-*,"\
-"-cppcoreguidelines-avoid-magic-numbers,"\
-"-readability-magic-numbers,"\
-"-modernize-use-trailing-return-type,"\
-"-cppcoreguidelines-pro-bounds-pointer-arithmetic,"\
-"-cppcoreguidelines-pro-type-reinterpret-cast"
+          CHECKS="bugprone-*,clang-analyzer-*,concurrency-*"
+          CHECKS="${CHECKS},cppcoreguidelines-*,modernize-*,readability-*"
+          CHECKS="${CHECKS},-cppcoreguidelines-avoid-magic-numbers"
+          CHECKS="${CHECKS},-readability-magic-numbers"
+          CHECKS="${CHECKS},-modernize-use-trailing-return-type"
+          CHECKS="${CHECKS},-cppcoreguidelines-pro-bounds-pointer-arithmetic"
+          CHECKS="${CHECKS},-cppcoreguidelines-pro-type-reinterpret-cast"
 
           TIDY_FAILED=0
           for src in $SOURCES; do
