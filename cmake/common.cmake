@@ -7,6 +7,20 @@ function(llama_add_compile_flags)
             list(APPEND CXX_FLAGS -Werror)
         elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
             add_compile_options(/WX)
+            # MSVC under /WX promotes a long list of pervasive narrowing /
+            # data-loss warnings on llama.cpp upstream code (size_t -> int,
+            # int64_t -> int, double -> float, etc.) to errors. Match the
+            # suppressions that ggml/CMakeLists.txt already applies to its
+            # own targets so /WX still catches genuine errors without
+            # requiring per-line casts in every upstream file.
+            add_compile_options(
+                /wd4005  # Macro redefinition
+                /wd4244  # Conversion, possible loss of data
+                /wd4267  # 'size_t' to a smaller type, possible loss of data
+                /wd4305  # 'type1' to 'type2', possible loss of data
+                /wd4566  # 'char' to 'wchar_t', possible loss of data
+                /wd4996  # POSIX deprecation warnings
+            )
         endif()
     endif()
 
