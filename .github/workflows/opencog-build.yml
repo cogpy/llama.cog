@@ -22,6 +22,7 @@ on:
       - 'examples/opencog-cognitive/**'
       - 'tests/opencog/**'
       - '**/CMakeLists.txt'
+      - 'cmake/**'
 
   pull_request:
     types: [opened, synchronize, reopened]
@@ -32,6 +33,7 @@ on:
       - 'examples/opencog-cognitive/**'
       - 'tests/opencog/**'
       - '**/CMakeLists.txt'
+      - 'cmake/**'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
