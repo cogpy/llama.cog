@@ -288,7 +288,7 @@ static void llama_sampler_softmax_impl(llama_token_data_array * cur_p, bool do_s
 
     // Sort the logits in descending order if requested
     if (do_sort && !cur_p->sorted) {
-        llama_token_data_array_partial_sort_inplace(cur_p, cur_p->size);
+        llama_token_data_array_partial_sort_inplace(cur_p, (int) cur_p->size);
     }
 
     float max_l = cur_p->data[0].logit;
@@ -550,7 +550,7 @@ struct llama_sampler * llama_sampler_chain_remove(struct llama_sampler * chain, 
 int llama_sampler_chain_n(const struct llama_sampler * chain) {
     const auto * p = (const llama_sampler_chain *) chain->ctx;
 
-    return p->samplers.size();
+    return (int) p->samplers.size();
 }
 
 //
@@ -655,7 +655,7 @@ static void llama_sampler_dist_apply(struct llama_sampler * smpl, llama_token_da
         }
 
         // normalize probs
-        cur_p->data[i].p /= sum_cum;
+        cur_p->data[i].p /= (float) sum_cum;
     }
 
     // fallback to the last token (don't think this can happen)
@@ -790,11 +790,11 @@ static void llama_sampler_top_p_apply(struct llama_sampler * smpl, llama_token_d
     // if not sorted, try adaptive top-k sorting
     if (!cur_p->sorted && cur_p->size > 1024) {
         k = std::min<size_t>(256, cur_p->size);
-        llama_token_data_array_partial_sort(*cur_p, k, buf_sort);
+        llama_token_data_array_partial_sort(*cur_p, (int) k, buf_sort);
         pdata = buf_sort.data();
     } else if (!cur_p->sorted) {
         // small candidates -> sort inplace
-        llama_token_data_array_partial_sort_inplace(cur_p, k);
+        llama_token_data_array_partial_sort_inplace(cur_p, (int) k);
     }
 
     // Compute the cumulative probabilities
@@ -814,7 +814,7 @@ static void llama_sampler_top_p_apply(struct llama_sampler * smpl, llama_token_d
         // we exceeded the current top-k heuristic -> increase k and continue
         if (!cur_p->sorted && i == k - 1) {
             k = cur_p->size;
-            llama_token_data_array_partial_sort(*cur_p, k, buf_sort);
+            llama_token_data_array_partial_sort(*cur_p, (int) k, buf_sort);
             pdata = buf_sort.data();
         }
     }
@@ -905,7 +905,7 @@ static void llama_sampler_min_p_apply(struct llama_sampler * smpl, llama_token_d
     if (!min_p_applied) {
         // Sort the logits in descending order
         if (!cur_p->sorted) {
-            llama_token_data_array_partial_sort_inplace(cur_p, cur_p->size);
+            llama_token_data_array_partial_sort_inplace(cur_p, (int) cur_p->size);
         }
 
         const float min_logit = cur_p->data[0].logit + logf(ctx->p); // min logit for p_i >= p * p_max
