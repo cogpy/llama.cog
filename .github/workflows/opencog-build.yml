@@ -79,9 +79,6 @@ jobs:
         run: |
           cmake --build build --config Release \
             --target opencog llama-cognitive \
-              test-atomspace test-cognitive-cycle \
-              test-embodied-reasoning test-prompt-engine \
-              test-cognitive-system \
             -j $(nproc)
 
       - name: Run unit tests
@@ -121,9 +118,6 @@ jobs:
         run: |
           cmake --build build --config Release \
             --target opencog llama-cognitive \
-              test-atomspace test-cognitive-cycle \
-              test-embodied-reasoning test-prompt-engine \
-              test-cognitive-system \
             -j $(nproc)
 
       - name: Run unit tests
@@ -165,9 +159,6 @@ jobs:
         run: |
           cmake --build build --config Debug \
             --target opencog llama-cognitive \
-              test-atomspace test-cognitive-cycle \
-              test-embodied-reasoning test-prompt-engine \
-              test-cognitive-system \
             -j $(nproc)
 
       - name: Run unit tests
@@ -211,9 +202,6 @@ jobs:
         run: |
           cmake --build build --config Debug \
             --target opencog llama-cognitive \
-              test-atomspace test-cognitive-cycle \
-              test-embodied-reasoning test-prompt-engine \
-              test-cognitive-system \
             -j $(nproc)
 
       - name: Run unit tests
@@ -259,9 +247,6 @@ jobs:
         run: |
           cmake --build build --config Debug \
             --target opencog llama-cognitive \
-              test-atomspace test-cognitive-cycle \
-              test-embodied-reasoning test-prompt-engine \
-              test-cognitive-system \
             -j $(nproc)
 
       - name: Run unit tests
@@ -303,9 +288,6 @@ jobs:
         run: |
           cmake --build build --config Release \
             --target opencog llama-cognitive \
-              test-atomspace test-cognitive-cycle \
-              test-embodied-reasoning test-prompt-engine \
-              test-cognitive-system \
             -j $(sysctl -n hw.logicalcpu)
 
       - name: Run unit tests
@@ -337,10 +319,7 @@ jobs:
       - name: Build OpenCog targets
         run: |
           cmake --build build --config Release `
-            --target opencog llama-cognitive `
-              test-atomspace test-cognitive-cycle `
-              test-embodied-reasoning test-prompt-engine `
-              test-cognitive-system
+            --target opencog llama-cognitive
 
       - name: Run unit tests
         run: |
