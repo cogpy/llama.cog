@@ -228,6 +228,6 @@ llama_build_and_test(test-alloc.cpp)
 target_include_directories(test-alloc PRIVATE ${PROJECT_SOURCE_DIR}/ggml/src)
 
 # OpenCog cognitive architecture unit tests (no model required)
-if (TARGET opencog)
+if (TARGET opencog AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/opencog/CMakeLists.txt")
     add_subdirectory(opencog)
 endif()
