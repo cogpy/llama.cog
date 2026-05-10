@@ -48,3 +48,8 @@ if (BUILD_SHARED_LIBS)
     target_compile_definitions(llama PRIVATE LLAMA_BUILD)
     target_compile_definitions(llama PUBLIC  LLAMA_SHARED)
 endif()
+
+# OpenCog cognitive architecture components: built as a separate static
+# library so they are not linked into every consumer of libllama, only into
+# the few targets (e.g. llama-cognitive) that opt in.
+add_subdirectory(opencog)
