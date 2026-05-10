@@ -23,6 +23,7 @@ function(llama_add_compile_flags)
                 /wd4267  # 'size_t' to a smaller type, possible loss of data
                 /wd4305  # 'type1' to 'type2', possible loss of data
                 /wd4566  # 'char' to 'wchar_t', possible loss of data
+                /wd4702  # Unreachable code
                 /wd4996  # POSIX deprecation warnings
             )
         endif()
