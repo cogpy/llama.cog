@@ -24,6 +24,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: write   # required for softprops/action-gh-release to upload assets
+
 jobs:
   opencog-release-artifacts:
     name: 'Release artifact (${{ matrix.arch }})'
@@ -81,9 +84,9 @@ jobs:
             -j $(nproc)
 
       # -----------------------------------------------------------------------
-      # 5. Stage release artefacts
+      # 5. Stage release artifacts
       # -----------------------------------------------------------------------
-      - name: Stage artefacts
+      - name: Stage artifacts
         run: |
           STAGE="opencog-release-linux-${{ matrix.arch }}"
           mkdir -p "${STAGE}/bin" "${STAGE}/lib"
@@ -100,7 +103,6 @@ jobs:
 
           tar -czf "${STAGE}.tar.gz" "${STAGE}"
           echo "ARTIFACT=${STAGE}.tar.gz" >> "$GITHUB_ENV"
-
       # -----------------------------------------------------------------------
       # 6. Upload to GitHub release
       # -----------------------------------------------------------------------
