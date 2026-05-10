@@ -1,0 +1,135 @@
+# Static analysis for the OpenCog cognitive LLM architecture.
+#
+# Jobs:
+#   1. opencog-clang-format — verifies formatting matches .clang-format
+#   2. opencog-clang-tidy   — runs clang-tidy on all OpenCog source files
+
+name: OpenCog Lint
+
+on:
+  workflow_dispatch: {}
+
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/opencog-lint.yml'
+      - 'src/opencog/**'
+      - 'include/opencog/**'
+      - 'examples/opencog-cognitive/**'
+      - 'tests/opencog/**'
+      - '**/CMakeLists.txt'
+      - '.clang-format'
+      - '.clang-tidy'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/opencog-lint.yml'
+      - 'src/opencog/**'
+      - 'include/opencog/**'
+      - 'examples/opencog-cognitive/**'
+      - 'tests/opencog/**'
+      - '**/CMakeLists.txt'
+      - '.clang-format'
+      - '.clang-tidy'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# ---------------------------------------------------------------------------
+# clang-format check
+# ---------------------------------------------------------------------------
+jobs:
+  opencog-clang-format:
+    name: 'clang-format'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need history for git clang-format
+
+      - name: Install clang-format
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends clang-format
+
+      - name: Check formatting (OpenCog files only)
+        run: |
+          # Collect the list of OpenCog C++ sources and headers
+          FILES=$(find src/opencog include/opencog examples/opencog-cognitive tests/opencog \
+                    -name '*.cpp' -o -name '*.h' 2>/dev/null | sort)
+
+          if [ -z "$FILES" ]; then
+            echo "No OpenCog C++ files found — skipping."
+            exit 0
+          fi
+
+          # Run clang-format in dry-run mode; non-zero exit means formatting issues
+          echo "$FILES" | xargs clang-format --dry-run --Werror 2>&1
+
+  # ---------------------------------------------------------------------------
+  # clang-tidy analysis
+  # ---------------------------------------------------------------------------
+  opencog-clang-tidy:
+    name: 'clang-tidy'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev \
+            clang clang-tidy cmake
+
+      - name: Configure with compile commands
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_CXX_COMPILER=clang++
+
+      # Build enough for compile_commands.json to be complete
+      - name: Build (generate compile_commands.json)
+        run: cmake --build build --target opencog -j $(nproc)
+
+      - name: Run clang-tidy on OpenCog sources
+        run: |
+          SOURCES=$(find src/opencog \
+                      -name '*.cpp' 2>/dev/null | sort)
+
+          if [ -z "$SOURCES" ]; then
+            echo "No OpenCog source files found — skipping."
+            exit 0
+          fi
+
+          CHECKS="bugprone-*,clang-analyzer-*,concurrency-*,"\
+"cppcoreguidelines-*,modernize-*,readability-*,"\
+"-cppcoreguidelines-avoid-magic-numbers,"\
+"-readability-magic-numbers,"\
+"-modernize-use-trailing-return-type,"\
+"-cppcoreguidelines-pro-bounds-pointer-arithmetic,"\
+"-cppcoreguidelines-pro-type-reinterpret-cast"
+
+          TIDY_FAILED=0
+          for src in $SOURCES; do
+            echo "=== clang-tidy: $src ==="
+            clang-tidy \
+              --checks="$CHECKS" \
+              -p build \
+              "$src" 2>&1 || TIDY_FAILED=1
+          done
+
+          exit $TIDY_FAILED

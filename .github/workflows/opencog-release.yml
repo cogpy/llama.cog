@@ -1,0 +1,126 @@
+# Release artifact packaging for the OpenCog cognitive LLM binary.
+#
+# Triggered on:
+#   • GitHub release (published event)
+#   • Manual workflow_dispatch
+#
+# Builds llama-cognitive for Linux x64 and Linux arm64, packages each into
+# a self-contained .tar.gz, and uploads them as release assets.
+
+name: OpenCog Release
+
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag to attach artifacts to (e.g. v1.2.3); leave empty to skip upload'
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write   # required for softprops/action-gh-release to upload assets
+
+jobs:
+  opencog-release-artifacts:
+    name: 'Release artifact (${{ matrix.arch }})'
+    runs-on: ${{ matrix.runner }}
+
+    strategy:
+      matrix:
+        include:
+          - arch: x64
+            runner: ubuntu-22.04
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+      fail-fast: false
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Clone
+        uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # 2. ccache
+      # -----------------------------------------------------------------------
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-release-${{ matrix.arch }}
+          evict-old-files: 7d
+
+      # -----------------------------------------------------------------------
+      # 3. Dependencies
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev git
+
+      # -----------------------------------------------------------------------
+      # 4. Configure & build (Release, shared libs enabled for packaging)
+      # -----------------------------------------------------------------------
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DBUILD_SHARED_LIBS=ON \
+            -DCMAKE_INSTALL_PREFIX=install
+
+      - name: Build
+        run: |
+          cmake --build build --config Release \
+            --target llama-cognitive opencog \
+            -j $(nproc)
+
+      # -----------------------------------------------------------------------
+      # 5. Stage release artifacts
+      # -----------------------------------------------------------------------
+      - name: Stage artifacts
+        run: |
+          STAGE="opencog-release-linux-${{ matrix.arch }}"
+          mkdir -p "${STAGE}/bin" "${STAGE}/lib"
+
+          # Binary
+          cp build/bin/llama-cognitive "${STAGE}/bin/"
+
+          # Shared libraries produced by this build
+          find build -name 'libllama*.so*' -o -name 'libggml*.so*' \
+               2>/dev/null | xargs -I{} cp {} "${STAGE}/lib/" || true
+
+          # README
+          cp README_OPENCOG.md "${STAGE}/"
+
+          tar -czf "${STAGE}.tar.gz" "${STAGE}"
+          echo "ARTIFACT=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+      # -----------------------------------------------------------------------
+      # 6. Upload to GitHub release
+      # -----------------------------------------------------------------------
+      - name: Upload release asset
+        if: github.event_name == 'release' || github.event.inputs.tag_name != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name || github.ref_name }}
+          files: ${{ env.ARTIFACT }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # -----------------------------------------------------------------------
+      # 7. Always upload as workflow artifact (available even on dispatch)
+      # -----------------------------------------------------------------------
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencog-linux-${{ matrix.arch }}
+          path: ${{ env.ARTIFACT }}
+          retention-days: 14

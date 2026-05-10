@@ -1,0 +1,347 @@
+# Build & unit-test CI for the OpenCog cognitive LLM architecture.
+#
+# Covers:
+#   - Multi-platform builds (Linux x64, Linux arm64, macOS arm64, Windows x64)
+#   - Sanitizer builds (ASAN, UBSAN, TSAN) on Linux
+#   - CTest execution of the "opencog" label tests (model-free)
+#
+# All jobs use ccache for faster incremental rebuilds.
+
+name: OpenCog Build & Unit CI
+
+on:
+  workflow_dispatch: {}
+
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/opencog-build.yml'
+      - 'src/opencog/**'
+      - 'include/opencog/**'
+      - 'examples/opencog-cognitive/**'
+      - 'tests/opencog/**'
+      - '**/CMakeLists.txt'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/opencog-build.yml'
+      - 'src/opencog/**'
+      - 'include/opencog/**'
+      - 'examples/opencog-cognitive/**'
+      - 'tests/opencog/**'
+      - '**/CMakeLists.txt'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref && github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  LLAMA_LOG_COLORS: 1
+  LLAMA_LOG_PREFIX: 1
+  LLAMA_LOG_TIMESTAMPS: 1
+
+# ---------------------------------------------------------------------------
+# Linux x64
+# ---------------------------------------------------------------------------
+jobs:
+  opencog-linux-x64:
+    name: 'Linux x64 (Release)'
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-linux-x64
+          evict-old-files: 1d
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev git
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLAMA_FATAL_WARNINGS=ON
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Release \
+            --target opencog llama-cognitive \
+              test-atomspace test-cognitive-cycle \
+              test-embodied-reasoning test-prompt-engine \
+              test-cognitive-system \
+            -j $(nproc)
+
+      - name: Run unit tests
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 120
+
+  # ---------------------------------------------------------------------------
+  # Linux arm64
+  # ---------------------------------------------------------------------------
+  opencog-linux-arm64:
+    name: 'Linux arm64 (Release)'
+    runs-on: ubuntu-22.04-arm
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-linux-arm64
+          evict-old-files: 1d
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev git
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLAMA_FATAL_WARNINGS=ON
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Release \
+            --target opencog llama-cognitive \
+              test-atomspace test-cognitive-cycle \
+              test-embodied-reasoning test-prompt-engine \
+              test-cognitive-system \
+            -j $(nproc)
+
+      - name: Run unit tests
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 120
+
+  # ---------------------------------------------------------------------------
+  # Linux ASAN (Address Sanitizer)
+  # ---------------------------------------------------------------------------
+  opencog-linux-asan:
+    name: 'Linux ASAN (Debug)'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-linux-asan
+          evict-old-files: 1d
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DLLAMA_SANITIZE_ADDRESS=ON
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Debug \
+            --target opencog llama-cognitive \
+              test-atomspace test-cognitive-cycle \
+              test-embodied-reasoning test-prompt-engine \
+              test-cognitive-system \
+            -j $(nproc)
+
+      - name: Run unit tests
+        env:
+          ASAN_OPTIONS: halt_on_error=1:detect_leaks=0
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 180
+
+  # ---------------------------------------------------------------------------
+  # Linux UBSAN (Undefined Behaviour Sanitizer)
+  # ---------------------------------------------------------------------------
+  opencog-linux-ubsan:
+    name: 'Linux UBSAN (Debug)'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-linux-ubsan
+          evict-old-files: 1d
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DLLAMA_SANITIZE_UNDEFINED=ON
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Debug \
+            --target opencog llama-cognitive \
+              test-atomspace test-cognitive-cycle \
+              test-embodied-reasoning test-prompt-engine \
+              test-cognitive-system \
+            -j $(nproc)
+
+      - name: Run unit tests
+        env:
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 180
+
+  # ---------------------------------------------------------------------------
+  # Linux TSAN (Thread Sanitizer)
+  # ---------------------------------------------------------------------------
+  opencog-linux-tsan:
+    name: 'Linux TSAN (Debug)'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-linux-tsan
+          evict-old-files: 1d
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev
+
+      - name: Configure
+        # OpenMP must be disabled for TSAN (known incompatibility)
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DLLAMA_SANITIZE_THREAD=ON \
+            -DGGML_OPENMP=OFF
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Debug \
+            --target opencog llama-cognitive \
+              test-atomspace test-cognitive-cycle \
+              test-embodied-reasoning test-prompt-engine \
+              test-cognitive-system \
+            -j $(nproc)
+
+      - name: Run unit tests
+        env:
+          TSAN_OPTIONS: halt_on_error=1
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 180
+
+  # ---------------------------------------------------------------------------
+  # macOS arm64
+  # ---------------------------------------------------------------------------
+  opencog-macos-arm64:
+    name: 'macOS arm64 (Release)'
+    runs-on: macos-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-macos-arm64
+          evict-old-files: 1d
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install curl || true
+
+      - name: Configure
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DGGML_METAL=OFF
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Release \
+            --target opencog llama-cognitive \
+              test-atomspace test-cognitive-cycle \
+              test-embodied-reasoning test-prompt-engine \
+              test-cognitive-system \
+            -j $(sysctl -n hw.logicalcpu)
+
+      - name: Run unit tests
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 120
+
+  # ---------------------------------------------------------------------------
+  # Windows x64
+  # ---------------------------------------------------------------------------
+  opencog-windows-x64:
+    name: 'Windows x64 (Release)'
+    runs-on: windows-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-windows-x64
+          evict-old-files: 1d
+
+      - name: Configure
+        run: |
+          cmake -B build `
+            -DLLAMA_FATAL_WARNINGS=ON
+
+      - name: Build OpenCog targets
+        run: |
+          cmake --build build --config Release `
+            --target opencog llama-cognitive `
+              test-atomspace test-cognitive-cycle `
+              test-embodied-reasoning test-prompt-engine `
+              test-cognitive-system
+
+      - name: Run unit tests
+        run: |
+          ctest --test-dir build -L opencog --verbose --timeout 120 -C Release

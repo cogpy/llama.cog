@@ -1,0 +1,85 @@
+name: 'OpenCog Build Setup'
+description: |
+  Reusable composite action that installs dependencies, configures CMake,
+  and builds the OpenCog static library plus the llama-cognitive binary.
+  Suitable for use on ubuntu-latest, macos-latest, and windows-latest runners.
+
+inputs:
+  cmake-extra-flags:
+    description: 'Additional CMake configuration flags (space-separated)'
+    required: false
+    default: ''
+  build-type:
+    description: 'CMake build type (Release, RelWithDebInfo, Debug)'
+    required: false
+    default: 'Release'
+  os:
+    description: 'Runner OS family: linux | macos | windows'
+    required: false
+    default: 'linux'
+
+outputs:
+  build-dir:
+    description: 'Path to the CMake build directory'
+    value: ${{ steps.set-build-dir.outputs.build-dir }}
+
+runs:
+  using: composite
+  steps:
+    # -----------------------------------------------------------------------
+    # Resolve build directory path
+    # -----------------------------------------------------------------------
+    - name: Set build directory
+      id: set-build-dir
+      shell: bash
+      run: echo "build-dir=build" >> "$GITHUB_OUTPUT"
+
+    # -----------------------------------------------------------------------
+    # Linux dependencies
+    # -----------------------------------------------------------------------
+    - name: Install Linux dependencies
+      if: inputs.os == 'linux'
+      shell: bash
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          libcurl4-openssl-dev \
+          git
+
+    # -----------------------------------------------------------------------
+    # macOS dependencies
+    # -----------------------------------------------------------------------
+    - name: Install macOS dependencies
+      if: inputs.os == 'macos'
+      shell: bash
+      run: |
+        brew update
+        brew install curl || true
+
+    # -----------------------------------------------------------------------
+    # Configure CMake
+    # -----------------------------------------------------------------------
+    - name: Configure CMake
+      shell: bash
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=${{ inputs.build-type }} \
+          -DLLAMA_FATAL_WARNINGS=ON \
+          ${{ inputs.cmake-extra-flags }}
+
+    # -----------------------------------------------------------------------
+    # Build OpenCog library, cognitive binary, and unit tests
+    # -----------------------------------------------------------------------
+    - name: Build OpenCog targets
+      shell: bash
+      run: |
+        cmake --build build \
+          --config ${{ inputs.build-type }} \
+          --target opencog llama-cognitive \
+            test-atomspace \
+            test-cognitive-cycle \
+            test-embodied-reasoning \
+            test-prompt-engine \
+            test-cognitive-system \
+          -j $(nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 4)
