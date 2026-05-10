@@ -35,7 +35,8 @@ int main() {
         cat->set_truth_value(opencog::truth_value(0.9, 0.8));
         cat->set_attention_value(opencog::attention_value(0.2, 0.1));
         atomspace.update_attention_values();
-        require_true(cat->get_attention_value().importance > 0.2, "importance should increase after attention update");
+        require_true(std::abs(cat->get_attention_value().importance - 0.28) < 1e-9,
+                     "importance should be updated using truth-value confidence");
 
         auto queried = atomspace.query("cat");
         require_true(!queried.empty(), "query for existing concept should return results");

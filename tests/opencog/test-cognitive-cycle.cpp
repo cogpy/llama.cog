@@ -19,7 +19,7 @@ int main() {
         auto llm = std::make_shared<opencog::llm_inference_engine>();
         opencog::cognitive_cycle_manager cycle(atomspace, llm);
 
-        cycle.set_cycle_frequency_hz(1000.0);
+        cycle.set_cycle_frequency_hz(120.0);
         cycle.set_attention_decay_rate(2.0);
         cycle.add_goal(opencog::goal("high-priority-goal", 0.9));
         cycle.add_goal(opencog::goal("low-priority-goal", 0.2));
