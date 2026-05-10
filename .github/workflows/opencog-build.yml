@@ -332,7 +332,8 @@ jobs:
       - name: Configure
         run: |
           cmake -B build `
-            -DLLAMA_FATAL_WARNINGS=ON
+            -DLLAMA_FATAL_WARNINGS=ON `
+            -DLLAMA_CURL=OFF
 
       - name: Build OpenCog targets
         run: |
