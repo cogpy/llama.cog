@@ -1,0 +1,184 @@
+# End-to-end tests for the OpenCog cognitive LLM binary (llama-cognitive).
+#
+# Requires a tiny GGUF model, downloaded from HuggingFace during the job.
+# Two matrix slots:
+#   • Release build — clean binary
+#   • RelWithDebInfo + ASAN — memory-safety checked binary
+
+name: OpenCog E2E Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit SHA to build (defaults to HEAD of the triggering ref)'
+        required: false
+        type: string
+      slow_tests:
+        description: 'Run slow tests (benchmark / perplexity)'
+        required: false
+        type: boolean
+        default: false
+
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/opencog-e2e.yml'
+      - 'src/opencog/**'
+      - 'include/opencog/**'
+      - 'examples/opencog-cognitive/**'
+      - 'tests/opencog/**'
+      - '**/CMakeLists.txt'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/opencog-e2e.yml'
+      - 'src/opencog/**'
+      - 'include/opencog/**'
+      - 'examples/opencog-cognitive/**'
+      - 'tests/opencog/**'
+      - '**/CMakeLists.txt'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  LLAMA_LOG_COLORS: 1
+  LLAMA_LOG_PREFIX: 1
+  LLAMA_LOG_TIMESTAMPS: 1
+
+jobs:
+  opencog-e2e:
+    name: 'E2E (${{ matrix.build_type }}${{ matrix.sanitizer && format("+{0}", matrix.sanitizer) || "" }})'
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        include:
+          - build_type: Release
+            sanitizer: ''
+          - build_type: RelWithDebInfo
+            sanitizer: ADDRESS
+      fail-fast: false
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. Checkout
+      # -----------------------------------------------------------------------
+      - name: Clone
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.sha || github.event.pull_request.head.sha || github.sha }}
+
+      # -----------------------------------------------------------------------
+      # 2. ccache
+      # -----------------------------------------------------------------------
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: opencog-e2e-${{ matrix.build_type }}${{ matrix.sanitizer }}
+          evict-old-files: 1d
+
+      # -----------------------------------------------------------------------
+      # 3. Install system dependencies
+      # -----------------------------------------------------------------------
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential libcurl4-openssl-dev wget git
+
+      # -----------------------------------------------------------------------
+      # 4. Configure CMake
+      # -----------------------------------------------------------------------
+      - name: Configure CMake
+        run: |
+          SANITIZER_FLAG=""
+          if [ -n "${{ matrix.sanitizer }}" ]; then
+            SANITIZER_FLAG="-DLLAMA_SANITIZE_${{ matrix.sanitizer }}=ON"
+          fi
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            $SANITIZER_FLAG
+
+      # -----------------------------------------------------------------------
+      # 5. Build cognitive binary + conversion tool
+      # -----------------------------------------------------------------------
+      - name: Build
+        run: |
+          cmake --build build --config ${{ matrix.build_type }} \
+            --target llama-cognitive llama-convert-llama2c-to-ggml llama-bench \
+            -j $(nproc)
+
+      # -----------------------------------------------------------------------
+      # 6. Download tiny test model (stories260K)
+      # -----------------------------------------------------------------------
+      - name: Download tokenizer (stories260K)
+        run: |
+          cd build
+          wget -q https://huggingface.co/karpathy/tinyllamas/resolve/main/stories260K/tok512.bin
+
+      - name: Download stories260K llama2c model
+        run: |
+          cd build
+          wget -q https://huggingface.co/karpathy/tinyllamas/resolve/main/stories260K/stories260K.bin
+
+      - name: Convert stories260K → GGUF
+        run: |
+          cd build
+          ./bin/llama-convert-llama2c-to-ggml \
+            --copy-vocab-from-model ./tok512.bin \
+            --llama2c-model ./stories260K.bin \
+            --llama2c-output-model ./stories260K.gguf
+
+      # -----------------------------------------------------------------------
+      # 7. Run E2E shell tests
+      # -----------------------------------------------------------------------
+      - name: Run E2E tests
+        env:
+          ASAN_OPTIONS: ${{ matrix.sanitizer == 'ADDRESS' && 'halt_on_error=1:detect_leaks=0' || '' }}
+        run: |
+          chmod +x tests/opencog/e2e-cognitive.sh
+          tests/opencog/e2e-cognitive.sh \
+            ./build/bin/llama-cognitive \
+            ./build/stories260K.gguf
+
+      # -----------------------------------------------------------------------
+      # 8. (Optional) Basic inference smoke-test with the tiny model
+      # -----------------------------------------------------------------------
+      - name: Smoke-test inference
+        run: |
+          timeout 60 ./build/bin/llama-cli \
+            -m ./build/stories260K.gguf \
+            -p "Once upon a time" \
+            -n 20 \
+            -c 64 \
+            --no-display-prompt \
+            2>&1 | tee /tmp/inference_out.txt
+          # Verify some text was generated
+          [ -s /tmp/inference_out.txt ]
+
+      # -----------------------------------------------------------------------
+      # 9. Performance gate (slow tests only — triggered via workflow_dispatch)
+      # -----------------------------------------------------------------------
+      - name: Performance benchmark
+        if: ${{ github.event.inputs.slow_tests == 'true' && matrix.sanitizer == '' }}
+        run: |
+          OUTPUT=$(./build/bin/llama-bench \
+            -m ./build/stories260K.gguf \
+            -n 32 \
+            -npp 64 \
+            2>&1)
+          echo "$OUTPUT"
+          # Assert that at least one token/s value > 0 was reported
+          if echo "$OUTPUT" | grep -qE "[1-9][0-9]*(\.[0-9]+)?\s+t/s"; then
+            echo "Performance gate PASSED"
+          else
+            echo "Performance gate FAILED: no positive tokens/s reported"
+            exit 1
+          fi
